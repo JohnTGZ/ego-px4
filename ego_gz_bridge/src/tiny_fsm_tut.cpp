@@ -1,117 +1,99 @@
-#include "tinyfsm.hpp"
+//
+// Copyright (c) 2016-2020 Kris Jusiak (kris at jusiak dot net)
+//
+// Distributed under the Boost Software License, Version 1.0.
+// (See accompanying file LICENSE_1_0.txt or copy at
+// http://www.boost.org/LICENSE_1_0.txt)
+//
+#include "sml.hpp"
+#include <cassert>
 #include <iostream>
 
-struct Off; 
+namespace sml = boost::sml;
 
-// ----------------------------------------------------------------------------
-// 1. Event Declarations
-//
+namespace {
 
-// This event is sent to the FSM on each callback to update the FSM
-struct FSMUpdateEvent : tinyfsm::Event {
-  bool have_target;
-  bool have_trigger;
-  bool have_odom;
-  bool flag_escape_emergency_;
-
-  bool have_recv_pre_agent; // All drones have assigned trajectories
+// events
+struct ack { 
+  bool valid{};
 };
-
-// ----------------------------------------------------------------------------
-// 2. State Machine Base Class Declaration
-//
-class EgoFSM : public tinyfsm::Fsm<EgoFSM>
-{
-public:
-  virtual void react(Toggle const &) {};
-  // alternative: enforce handling of Toggle in all states (pure virtual)
-  // virtual void react(Toggle const &) = 0;
-
-  virtual void entry(void) {};  /* entry actions in some states */
-  void exit(void) {}; /* no exit actions*/
-
-  // Alternative: enforce entry actions in all states (pure virtual)
-  // virtual void entry(void) = 0;
-
-  int current_state = 0;
+struct fin {
+  int id{};
+  bool valid{};
 };
+struct timeout {};
+struct release {};
 
-// ----------------------------------------------------------------------------
-// Transition functions
-//
-void toggle_switch(bool toggle) {
-  if (toggle) {
-    std::cout << "*Switch is ON" << std::endl;
+// guards
+const auto is_ack_valid = [](const ack& ack_event) { 
+  if (ack_event.valid){
+    return true; 
   }
   else {
-    std::cout << "* Switch is OFF" << std::endl;
+    std::cout << "Invalid acknowledgement" << std::endl;
+    return false;
   }
+};
+
+const auto is_fin_valid = [](const fin& fin_event) { 
+  if (fin_event.valid){
+    return true; 
+  }
+  else {
+    std::cout << "Invalid fin" << std::endl;
+    return false;
+  }
+};
+
+// actions
+const auto send_fin = [] {
+  std::cout << "sent fin" << std::endl;
+};
+// const auto send_ack = [] {
+//   std::cout << "sent ack" << std::endl;
+// };
+struct send_ack {
+  void operator()() noexcept {
+    std::cout << "sent ack" << std::endl;
+  }
+};
+
+// States
+class established;
+class fin_wait_1;
+class fin_wait_2;
+class timed_wait;
+
+struct hello_world {
+  auto operator()() const {
+    using namespace sml;
+    // clang-format off
+    return make_transition_table(
+      *state<established> + event<release> / send_fin = state<fin_wait_1>,
+       state<fin_wait_1> + event<ack> [ is_ack_valid ] = state<fin_wait_2>,
+       state<fin_wait_2> + event<fin> [ is_fin_valid ] / send_ack() = state<timed_wait>,
+       state<timed_wait> + event<timeout> / send_ack() = X
+    );
+    // clang-format on
+  }
+};
 }
 
+int main() {
+  using namespace sml;
 
-// ----------------------------------------------------------------------------
-// 4. State Declarations
-//
-class On : public Switch
-{
-  void entry() override {
-    toggle_switch(true);
-  }
+  sm<hello_world> sm;
+  assert(sm.is(state<established>));
 
-  void react(Toggle const&) override {
-    if (current_state == 1){
-      std::cout << "Switch is already on, ignoring toggle" << std::endl;
-      return;
-    }
-    transit<Off>();
-  }
-};
+  sm.process_event(release{});
+  assert(sm.is(state<fin_wait_1>));
 
-class Off : public Switch
-{
-  void entry() override {
-    toggle_switch(false);
-  }
-  void react(Toggle const&) override {
-    if (current_state == 0){
-      std::cout << "Switch is already off, ignoring toggle" << std::endl;
-      return;
-    }
-    transit<On>();
-  }
-};
+  sm.process_event(ack{true});
+  assert(sm.is(state<fin_wait_2>));
 
-// Declare initial state to be OFF
-FSM_INITIAL_STATE(Switch, Off)
+  sm.process_event(fin{42,true});
+  assert(sm.is(state<timed_wait>));
 
-// ----------------------------------------------------------------------------
-// 5. State machine list declaration (dispatches events to multiple FSM's)
-//
-
-// using fsm_list = tinyfsm::FsmList< Switch>
-using fsm_handle = Switch;
-
-int main (int argc, char** argv)
-{
-  // Instantiate events
-  Toggle toggle;
-
-  fsm_handle::start();
-
-  while (1)
-  {
-    char c;
-    std::cout << std::endl << "t=Toggle, q=Quit?" ;
-    std::cin >> c;
-    switch (c) {
-    case 't':
-      std::cout << "> Toggling switch..." << std::endl;
-      fsm_handle::dispatch(toggle);
-      break;
-    case 'q':
-      return 0;
-    default:
-      std::cout << "> Invalid input" << std::endl;
-    }
-  }
+  sm.process_event(timeout{});
+  assert(sm.is(X));  // released
 }

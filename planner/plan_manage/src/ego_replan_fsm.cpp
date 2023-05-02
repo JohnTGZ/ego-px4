@@ -126,7 +126,7 @@ namespace ego_planner
       printFSMExecState();
     }
 
-    // TODO: Get FSM state
+    // TODO: Send event to state machine
     
 
     switch (exec_state_)

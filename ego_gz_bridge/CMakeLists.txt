@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.2)
 project(ego_gz_bridge)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11)
+add_compile_options(-std=c++14)
 
 
 set (ROS_LIBRARIES
@@ -160,11 +160,23 @@ target_link_libraries(cloud_repub_node
   ${catkin_LIBRARIES}
 )
 
-# add_executable(tiny_fsm_tut src/tiny_fsm_tut.cpp)
-# add_dependencies(tiny_fsm_tut ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-# target_link_libraries(tiny_fsm_tut
-#   ${catkin_LIBRARIES}
-# )
+add_executable(tiny_fsm_tut src/tiny_fsm_tut.cpp)
+add_dependencies(tiny_fsm_tut ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(tiny_fsm_tut
+  ${catkin_LIBRARIES}
+)
+
+add_executable(class_tiny_fsm_tut src/class_tiny_fsm_tut.cpp)
+add_dependencies(class_tiny_fsm_tut ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(class_tiny_fsm_tut
+  ${catkin_LIBRARIES}
+)
+
+add_executable(class_tiny_fsm_tut2 src/class_tiny_fsm_tut2.cpp)
+add_dependencies(class_tiny_fsm_tut2 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(class_tiny_fsm_tut2
+  ${catkin_LIBRARIES}
+)
 
 #############
 ## Install ##
