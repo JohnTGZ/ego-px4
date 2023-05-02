@@ -1,0 +1,20 @@
+<launch>
+  <arg name="x_pos" default="0.0"/>
+  <arg name="y_pos" default="0.0"/>
+  <arg name="z_pos" default="0.0"/>
+  <arg name="world_name" default="$(find ego_gz_bridge)/simulation/worlds/ego_test.world"/>
+
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(arg world_name)"/>
+    <arg name="paused" value="false"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="gui" value="false"/>
+    <arg name="headless" value="true"/>
+    <arg name="debug" value="false"/>
+  </include>
+
+  <!-- <param name="robot_description" command="$(find xacro)/xacro $(find ego_gz_bridge)/simulation/models/iris/urdf/iris.urdf.xacro" /> -->
+  <param name="robot_description" command="$(find xacro)/xacro $(find ego_gz_bridge)/simulation/models/iris_depth_camera/iris_depth_camera.sdf" />
+  <node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf"  args="-sdf -model iris_depth_camera -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos) -param robot_description" />
+
+</launch>
