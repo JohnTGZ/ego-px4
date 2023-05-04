@@ -64,16 +64,19 @@ make distclean
 10. Create another node just to transform point clouds to add publishing of point clouds from depth camera transformed from `camera_link` to `map` frame
 
 ## Changes TODO
-0. Use an established finite state machine library to replace the "homemade" one (Check out Matthew's package to see how he does it)
-1. Send the trajectories to `pbtm` instead of to `traj_server`
 2. FSM to correspond to that of PX4's flight mode
+    - Enable offboard mode
+    - SHould not have to use ego_gz_bridge_node
 3. Investigate how to accept point clouds within `camera_link` frame from the gridmap.
 4. Correct odom to be in `camera_link` frame
 5. Extend to multiple drones
+1. Send the trajectories to `pbtm` instead of to `traj_server`
 
 ## Issues
-1. Drone deviates significantly from trajectory path (Perhaps because we are sending PVA commands directly to the PX4 controller, and the controller model used in the egoswarm repo might not fit the actual dynamics of the drone)
-2. Drone's heading does not always face it's direction of travel (results in depth camera not facing the direction of travel)
+1. Start of planned trajectory is not based on the drone's actual position but rather the drone's predicted position.
+2. Drone deviates significantly from trajectory path (Perhaps because we are sending PVA commands directly to the PX4 controller, and the controller model used in the egoswarm repo might not fit the actual dynamics of the drone)
+3. Drone's heading does not always face it's direction of travel (results in depth camera not facing the direction of travel)
+
 
 ## Future TODO
 1. Need to set up proper TF Transformation

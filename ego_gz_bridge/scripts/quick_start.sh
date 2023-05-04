@@ -8,7 +8,7 @@ PX4_AUTOPILOT_REPO_DIR="$SCRIPT_DIR/../../../../PX4-Autopilot"
 
 SOURCE_PX4_AUTOPILOT="
 source $PX4_AUTOPILOT_REPO_DIR/Tools/simulation/gazebo-classic/setup_gazebo.bash $PX4_AUTOPILOT_REPO_DIR $PX4_AUTOPILOT_REPO_DIR/build/px4_sitl_default &&
-source ../../../devel/setup.bash &&
+source $SCRIPT_DIR/../../../../devel/setup.bash &&
 "
 ADD_ROS_PACKAGE_PATH="
 export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$PX4_AUTOPILOT_REPO_DIR:$PX4_AUTOPILOT_REPO_DIR/Tools/simulation/gazebo-classic/sitl_gazebo-classic &&

@@ -133,7 +133,7 @@
         <param name="grid_map/show_occ_time" value="false"/>
         <!-- Toggle between 1 ("grid_map/pose") or 2 ("grid_map/odom") to use different topics -->
         <param name="grid_map/pose_type" value="2"/>
-        <param name="grid_map/frame_id" value="camera_link"/>
+        <param name="grid_map/frame_id" value="world"/>
         <!-- planner manager -->
         <param name="manager/max_vel" value="$(arg max_vel)" type="double"/>
         <param name="manager/max_acc" value="$(arg max_acc)" type="double"/>
@@ -161,7 +161,7 @@
         <!-- formation-->
         <param name="formation/num" value="7"/>
         <rosparam param="formation/start">[-32,0,1]</rosparam>
-        <rosparam param="formation/drone0">[  1, -0.5, 0]</rosparam>
+        <rosparam param="formation/drone0">[  0, 0, 0]</rosparam>
         <rosparam param="formation/drone1">[  1,  0.5, 0]</rosparam>
         <rosparam param="formation/drone2">[  0, -1.0, 0]</rosparam>
         <rosparam param="formation/drone3">[  0,  0.0, 0]</rosparam>

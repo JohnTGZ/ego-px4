@@ -1,125 +1,81 @@
-//
-// Copyright (c) 2016-2020 Kris Jusiak (kris at jusiak dot net)
-//
-// Distributed under the Boost Software License, Version 1.0.
-// (See accompanying file LICENSE_1_0.txt or copy at
-// http://www.boost.org/LICENSE_1_0.txt)
-//
+// $CXX -std=c++14 euml_emulation.cpp
 #include "sml.hpp"
 #include <cassert>
-#include <iostream>
 
 namespace sml = boost::sml;
 
-// ----------------------------------------------------------------------------
-// 1. Event Declarations
-//
-struct ack { 
-  bool valid{};
-};
-struct fin {
-  int id{};
-  bool valid{};
-};
-struct timeout {};
-struct release {};
+namespace {
+struct FSMUpdate {
+  bool have_odom{false};
+  bool have_target{false};
+  bool have_trigger{false};
+  bool flag_escape_emergency{false};
+  bool plan_success{false};
 
-// ----------------------------------------------------------------------------
-// 2. Guards
-// 
-auto is_ack_valid = [](const ack& ack_event) { 
-  if (ack_event.valid){
-    return true; 
-  }
-  else {
-    std::cout << "Invalid acknowledgement" << std::endl;
-    return false;
-  }
+  int drone_id{0};
+  bool have_recv_pre_agent{false}; // All drones have assigned trajectories
 };
+struct e2 {};
+struct e3 {};
 
-auto is_fin_valid = [](const fin& fin_event) { 
-  if (fin_event.valid){
-    return true; 
-  }
-  else {
-    std::cout << "Invalid fin" << std::endl;
-    return false;
-  }
-};
+auto FSMUpdateEvent = sml::event<FSMUpdate>;
+auto event2 = sml::event<e2>;
+auto event3 = sml::event<e3>;
 
-// ----------------------------------------------------------------------------
-// 3. Actions
-// 
-struct send_ack {
-  void operator()() noexcept {
-    std::cout << "sent ack" << std::endl;
-  }
-};
-struct send_fin {
-  void operator()() noexcept {
-    std::cout << "sent fin" << std::endl;
-  }
-};
+auto init = sml::state<class init>;
+auto s1 = sml::state<class s1>;
+auto s2 = sml::state<class s2>;
 
-// ----------------------------------------------------------------------------
-// 4. States
-// 
-class established;
-class fin_wait_1;
-class fin_wait_2;
-class timed_wait;
+class euml_emulation;
 
-// ----------------------------------------------------------------------------
-// 5. State machine
-// 
-struct hello_world {
+struct Guard {
+  template <class TEvent>
+  bool operator()(euml_emulation&, const TEvent&) const;
+} guard;
+
+struct Action {
+  template <class TEvent>
+  void operator()(euml_emulation&, const TEvent&);
+} action;
+
+class euml_emulation {
+ public:
   auto operator()() const {
     using namespace sml;
-    // clang-format off
     return make_transition_table(
-      *state<established> + event<release> / send_fin() = state<fin_wait_1>,
-      state<fin_wait_1> + event<ack> [ is_ack_valid ] = state<fin_wait_2>,
-      state<fin_wait_2> + event<fin> [ is_fin_valid ] / send_ack() = state<timed_wait>,
-      state<timed_wait> + event<timeout> / send_ack() = X
+      s1 <= *init + FSMUpdateEvent,
+      s2 <= s1    + event2 [ guard ],
+      X  <= s2    + event3 [ guard ] / action
     );
   }
-};
 
-class FSMTop {
-public:
-  FSMTop(sml::sm<hello_world>& sm) : sm(sm) {
-    std::cout << "FSMTop created!" << std::endl;
+  template <class TEvent>
+  bool call_guard(const TEvent&) {
+    return true;
   }
 
-  void init() {
-    assert(sm.is(sml::state<established>));
-
-    sm.process_event(release{});
-    assert(sm.is(sml::state<fin_wait_1>));
-
-    sm.process_event(ack{true});
-    assert(sm.is(sml::state<fin_wait_2>));
-
-    sm.process_event(fin{42,true});
-    assert(sm.is(sml::state<timed_wait>));
-
-    sm.process_event(timeout{});
-    assert(sm.is(sml::X));  // released
-
-    std::cout << "hello_world terminated!" << std::endl;
-  }
-
-private:
-  sml::sm<hello_world>& sm;
+  void call_action(const e3&) {}
 };
 
+template <class TEvent>
+bool Guard::operator()(euml_emulation& sm, const TEvent& event) const {
+  return sm.call_guard(event);
+}
 
+template <class TEvent>
+void Action::operator()(euml_emulation& sm, const TEvent& event) {
+  sm.call_action(event);
+}
+}  // namespace
 
 int main() {
-  using namespace sml;
-
-  sm<hello_world> sm;
-  FSMTop fsmtop(sm);
-
-  fsmtop.init();
+  euml_emulation euml;
+  sml::sm<euml_emulation> sm{euml};
+  assert(sm.is(init));
+  // sm.process_event(FSMUpdate_event);
+  // assert(sm.is(s1));
+  // sm.process_event(e2{});
+  // assert(sm.is(s2));
+  // sm.process_event(e3{});
+  // assert(sm.is(sml::X));
 }

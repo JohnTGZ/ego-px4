@@ -8,171 +8,262 @@
 #include "sml.hpp"
 #include <cassert>
 #include <iostream>
-#include <chrono>
-#include <thread>
+// #include <chrono>
+// #include <thread>
 
+#include <ros/ros.h>
+#include <nav_msgs/Odometry.h>
 
 namespace sml = boost::sml;
 
-// ----------------------------------------------------------------------------
-// 1. Event Declarations
-//
-// struct ack { 
-//   bool valid{};
-// };
-// struct fin {
-//   int id{};
-//   bool valid{};
-// };
-// struct timeout {};
-// struct release {};
+namespace {
+// class Planner {
+// using self = Planner;
+// public:
 
+//   // Events
+//   struct GetPlan{};
+
+//   // Guards
+
+//   // States
+//   struct IDLE{};
+//   struct PLANNING{};
+
+
+// };
+
+// ----------------------------------------------------------------------------
+// Event Declarations
+//
 struct FSMUpdate{
   bool have_odom{false};
   bool have_target{false};
   bool have_trigger{false};
   bool flag_escape_emergency{false};
+  bool plan_success{false};
 
-  int drone_id{0};
   bool have_recv_pre_agent{false}; // All drones have assigned trajectories
 };
-
-// ----------------------------------------------------------------------------
-// 2. Guards
-// 
-// auto is_ack_valid = [](const ack& ack_event) { 
-//   if (ack_event.valid){
-//     return true; 
-//   }
-//   else {
-//     std::cout << "Invalid acknowledgement" << std::endl;
-//     return false;
-//   }
-// };
-
-// auto is_fin_valid = [](const fin& fin_event) { 
-//   if (fin_event.valid){
-//     return true; 
-//   }
-//   else {
-//     std::cout << "Invalid fin" << std::endl;
-//     return false;
-//   }
-// };
-
-auto wait_guard = [](const FSMUpdate& event) { 
-  if (event.have_odom){
-    return true;
-  }
-  else {
-    // goto force_return; // return;
-    return false;
-  }
+struct TriggerExec{
 };
 
-auto start_guard = [](const FSMUpdate& event) { 
-  if (event.have_target && event.have_trigger){
-    return true;
-  }
-  else {
-    // goto force_return; // return;
-    return false;
-  }
-};
+auto FSMUpdateEvent = sml::event<FSMUpdate>;
+auto TriggerExecEvent = sml::event<TriggerExec>;
 
 // ----------------------------------------------------------------------------
-// 3. Actions
+// States
 // 
-// struct wait_guard {
-//   void operator()() noexcept {
-//     std::cout << "sent ack" << std::endl;
-//   }
-// };
-// struct start_guard {
-//   void operator()() noexcept {
-//     std::cout << "sent fin" << std::endl;
-//   }
-// };
+auto INIT = sml::state<class INIT>;
+auto WAIT_TARGET = sml::state<class WAIT_TARGET>;
+auto SEQUENTIAL_START = sml::state<class SEQUENTIAL_START>;
+auto EXEC_TRAJ = sml::state<class EXEC_TRAJ>;
 
-// ----------------------------------------------------------------------------
-// 4. States
-// 
-class INIT;
-class WAIT_TARGET;
-class SEQUENTIAL_START;
-class EXEC_TRAJ;
+class EgoFSM {
+using self = EgoFSM;
 
-// ----------------------------------------------------------------------------
-// 5. State machine
-// 
-struct hello_world {
-  auto operator()() const {
-    using namespace sml;
-    // clang-format off
-    return make_transition_table(
-      // Initial state
-      *state<INIT> + event<FSMUpdate> [ wait_guard ] = state<WAIT_TARGET>,
-
-      state<WAIT_TARGET> + event<FSMUpdate> [ start_guard ] = state<SEQUENTIAL_START>,
-
-      state<SEQUENTIAL_START> + event<FSMUpdate> [ plan_success ] = state<EXEC_TRAJ>
-
-      // state<SEQUENTIAL_START> + event<FSMUpdate> [ start_guard ] = state<SEQUENTIAL_START>,
-      
-      // state<SEQUENTIAL_START> + event<fin> [ is_fin_valid ] / send_ack() = state<EXEC_TRAJ>,
-      
-      // state<EXEC_TRAJ> + event<timeout> / send_ack() = X
-    );
-  }
-};
-
-class FSMTop {
 public:
 
-  FSMTop(sml::sm<hello_world>& sm) : sm(sm) {
-    std::cout << "FSMTop created!" << std::endl;
+  EgoFSM() {
+    ROS_INFO("Constructed EgoFSM");
   }
 
-  void plan_path() {
-    std::cout << "Planning path!" << std::endl;
+  // ----------------------------------------------------------------------------
+  // Guards
+  // 
+
+  /**
+   * Check if it is possible to transition to WAIT_TARGET state
+  */
+  bool wait_target_guard(const FSMUpdate& event) const noexcept { 
+    if (event.have_odom){
+      return true;
+    }
+    else {
+      // goto force_return; // return;
+      return false;
+    }
   }
 
-  void init() {
-    assert(sm.is(sml::state<INIT>));
+  /**
+   * Check if it is possible to transition to SEQUENTIAL_START state
+  */
+  bool seq_start_guard(const FSMUpdate& event) { 
+    std::cout << "seq_start_guard" << std::endl;
 
-    FSMUpdate fsm_update = FSMUpdate();
+    return true;
 
-    fsm_update.have_odom = true;
-    sm.process_event(fsm_update);
-    // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    assert(sm.is(sml::state<WAIT_TARGET>));
-
-    fsm_update.have_target = true;
-    fsm_update.have_trigger = true;
-    sm.process_event(fsm_update);
-    assert(sm.is(sml::state<SEQUENTIAL_START>));
-
-    fsm_update.have_target = true;
-    sm.process_event(fsm_update);
-    assert(sm.is(sml::state<EXEC_TRAJ>));
-
-    // sm.process_event(timeout{});
-    // assert(sm.is(sml::X));  // released
-
-    std::cout << "hello_world terminated!" << std::endl;
+    // if (event.have_target && event.have_trigger){
+    //   return true;
+    // }
+    // else {
+    //   return false;
+    // }
   }
 
-private:
-  sml::sm<hello_world>& sm;
+  /**
+   * Check if it is possible to transition to EXEC_TRAJ state
+  */
+  bool exec_traj_guard() { 
+    std::cout << "exec_traj_guard" << std::endl;
+    if (fsm_update_.plan_success ){
+      return true;
+    }
+    else {
+      return false;
+    }
+  }
+
+  auto operator()() const noexcept{
+    using namespace sml;
+
+    return make_transition_table(
+      *INIT + FSMUpdateEvent [ &self::wait_target_guard ]  = WAIT_TARGET,
+
+      WAIT_TARGET + sml::on_entry<_> / &self::enable_offboard_mode, 
+      WAIT_TARGET + FSMUpdateEvent [ &self::seq_start_guard ] = SEQUENTIAL_START,
+
+      // SEQUENTIAL_START + sml::on_entry<_> / &self::planFromGlobalTraj, 
+      // SEQUENTIAL_START + FSMUpdateEvent / &self::planFromGlobalTraj,
+      // SEQUENTIAL_START + FSMUpdateEvent / (&self::planFromGlobalTraj, [](auto, auto&sm){ sm.process_event(TriggerExec{});}),
+
+      SEQUENTIAL_START + sml::on_entry<_> / &self::planFromGlobalTraj, 
+      SEQUENTIAL_START + FSMUpdateEvent [ &self::exec_traj_guard ] / &self::planFromGlobalTraj = EXEC_TRAJ
+
+      // SEQUENTIAL_START + FSMUpdateEvent / (&self::planFromGlobalTraj, process(TriggerExec{})),
+
+      // SEQUENTIAL_START + TriggerExecEvent [ &self::exec_traj_guard ] = EXEC_TRAJ
+    );
+  }
+
+  /* Planning Methods */
+  void planFromGlobalTraj(const int trial_times) 
+  {
+    std::cout << "Planning Global Traj!" << std::endl;
+    fsm_update_.plan_success = true;
+  }
+  
+  /* Helper Methods */
+  void enable_offboard_mode()
+  {
+    std::cout << "Enabling offboard mode!" << std::endl;
+  }
+
+  // To be updated by ROS Callbacks 
+  FSMUpdate fsm_update_;
+
+  // Parameters
+  int drone_id{0};
 };
 
 
+class TaskMaster{
+public:
 
-int main() {
+  void init(ros::NodeHandle& nh){
+    /* callback */
+    odom_sub_ = nh.subscribe("odom_world", 1, &TaskMaster::odometryCb, this);
+
+    /* timers */
+    fsm_update_timer_ = nh.createTimer(ros::Duration(1.0), &TaskMaster::FSMUpdateTimerCb, this);
+    ROS_INFO("Initialized EgoFSM");
+
+    // Create state machine
+    ego_fsm_.reset(new EgoFSM());
+
+    // ego_fsm_->fsm_update_.have_target = false;
+    // ego_fsm_->fsm_update_.have_trigger = false;
+    // ego_fsm_->fsm_update_.have_odom = false;
+    // ego_fsm_->fsm_update_.have_recv_pre_agent = false;
+    // ego_fsm_->fsm_update_.flag_escape_emergency = true;
+
+    sm_ptr_.reset(new sml::sm<EgoFSM>{*ego_fsm_});
+  }
+
+  /* ROS Callbacks */
+  void odometryCb(const nav_msgs::OdometryConstPtr &msg) {
+    ego_fsm_->fsm_update_.have_odom = true;
+  }
+
+  void FSMUpdateTimerCb(const ros::TimerEvent &e) {
+    sm_ptr_->process_event(ego_fsm_->fsm_update_);
+    print_current_state();
+  }
+
+  /* Helper Methods */
+
+  // Print current state of FSM
+  void print_current_state() {
+    // TODO Perhaps use a std::map to solve this problem
+    std::string current_state{""};
+
+    if (sm_ptr_->is(INIT)){
+      current_state = "INIT";
+    }
+    else if (sm_ptr_->is(WAIT_TARGET)){
+      current_state = "WAIT_TARGET";
+    }
+    else if (sm_ptr_->is(SEQUENTIAL_START)) {
+      current_state = "SEQUENTIAL_START";
+    }
+    else if (sm_ptr_->is(EXEC_TRAJ)) {
+      current_state = "EXEC_TRAJ";
+    }
+    else {
+      current_state = "UNDEFINED";
+    }
+
+    std::cout << "Current state: " << current_state << std::endl;
+  }
+
+  // Subscribers
+  ros::Subscriber odom_sub_;
+
+  // Timer to execute FSM Update callback
+  ros::Timer fsm_update_timer_;
+
+  // State machine class
+  std::unique_ptr<EgoFSM> ego_fsm_;
+  // State machine controller
+  std::unique_ptr<sml::sm<EgoFSM>> sm_ptr_;
+};
+
+} // namespace
+
+int main(int argc, char** argv) {
+
   using namespace sml;
 
-  sm<hello_world> sm;
-  FSMTop fsmtop(sm);
+  ros::init(argc, argv, "ego_planner_node");
+  ros::NodeHandle nh("~");
 
-  fsmtop.init();
+  TaskMaster task_master;
+  task_master.init(nh);
+
+  ros::spin();
+
+  return 0;
+
+  // task_master.fsm_update_.have_odom = true;
+  // sm.process_event(task_master.fsm_update_);
+  // // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  // assert(sm.is(state<EgoFSM::WAIT_TARGET>));
+
+  // task_master.fsm_update_.have_target = true;
+  // task_master.fsm_update_.have_trigger = true;
+  // sm.process_event(task_master.fsm_update_);
+  // assert(sm.is(sml::state<SEQUENTIAL_START>));
+  
+  // sm.process_event(task_master.fsm_update_);
+  // assert(sm.is(sml::state<EXEC_TRAJ>));
+
+  // sm.process_event(timeout{});
+  // assert(sm.is(sml::X));  // released
+
+  std::cout << "hello_world terminated!" << std::endl;
+
 }
+
+
+// int main() {
+// }

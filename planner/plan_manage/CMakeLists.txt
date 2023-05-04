@@ -49,8 +49,11 @@ target_link_libraries(ego_planner_node
 )
 #add_dependencies(ego_planner_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
-add_executable(traj_server src/traj_server.cpp)
-target_link_libraries(traj_server ${catkin_LIBRARIES})
+add_executable(traj_server_node 
+  src/traj_server_node.cpp
+  src/traj_server.cpp
+)
+target_link_libraries(traj_server_node ${catkin_LIBRARIES})
 # add_dependencies(traj_server ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
 

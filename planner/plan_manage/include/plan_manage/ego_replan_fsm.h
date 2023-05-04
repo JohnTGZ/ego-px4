@@ -87,7 +87,7 @@ namespace ego_planner
     // Indicates that all agents within a swarm have a provided trajectory
     bool have_recv_pre_agent_; 
     bool have_trigger_, have_target_, have_odom_, have_new_target_, touch_goal_, mandatory_stop_;
-    FSM_EXEC_STATE exec_state_;
+    FSM_EXEC_STATE current_state_;
     int continously_called_times_{0};
 
     Eigen::Vector3d start_pt_, start_vel_, start_acc_;   // start state
@@ -140,6 +140,11 @@ namespace ego_planner
 
     /* ground height measurement */
     bool measureGroundHeight(double &height);
+
+    // Count number of FSM exec iterations
+    int fsm_itr_num{0};
+
+    std::pair<bool,bool> isGoalReachedAndReplanNeeded();
   };
 
 } // namespace ego_planner

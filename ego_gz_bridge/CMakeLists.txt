@@ -10,6 +10,7 @@ set (ROS_LIBRARIES
   rospy
   std_msgs
   mavros_msgs
+  nav_msgs
   sensor_msgs
   tf
   tf2_sensor_msgs

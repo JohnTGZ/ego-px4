@@ -3,7 +3,8 @@
 SESSION="formation_sesh"
 SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
 
-SOURCE_WS="source ../../../devel/setup.bash &&"
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SOURCE_WS="source $SCRIPT_DIR/../../../../devel/setup.bash &&"
 
 CMD_0="roslaunch ego_gz_bridge rviz.launch"
 CMD_1="roslaunch ego_planner demo.launch"

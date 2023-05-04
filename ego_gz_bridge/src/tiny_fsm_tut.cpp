@@ -1,99 +1,182 @@
-//
-// Copyright (c) 2016-2020 Kris Jusiak (kris at jusiak dot net)
-//
-// Distributed under the Boost Software License, Version 1.0.
-// (See accompanying file LICENSE_1_0.txt or copy at
-// http://www.boost.org/LICENSE_1_0.txt)
-//
-#include "sml.hpp"
-#include <cassert>
+#include "tinyfsm.hpp"
 #include <iostream>
+#include <cassert>
 
-namespace sml = boost::sml;
+#include <ros/ros.h>
+#include <nav_msgs/Odometry.h>
+#include <std_msgs/Empty.h>
 
-namespace {
-
-// events
-struct ack { 
-  bool valid{};
-};
-struct fin {
-  int id{};
-  bool valid{};
-};
-struct timeout {};
-struct release {};
-
-// guards
-const auto is_ack_valid = [](const ack& ack_event) { 
-  if (ack_event.valid){
-    return true; 
+class TaskMaster {
+public:
+  TaskMaster() {
+    ROS_INFO("Constructed TaskMaster");
   }
-  else {
-    std::cout << "Invalid acknowledgement" << std::endl;
-    return false;
+
+  void init(ros::NodeHandle& nh){
+    state_update_event_.have_target = false;
+    state_update_event_.have_trigger = false;
+    state_update_event_.have_odom = false;
+    state_update_event_.have_recv_pre_agent = false;
+    state_update_event_.flag_escape_emergency = true;
+
+    /* callback */
+    odom_sub_ = nh.subscribe("odom_world", 1, &TaskMaster::odometryCb, this);
+
+    /* timers */
+    fsm_update_timer_ = nh.createTimer(ros::Duration(1.0), &TaskMaster::FSMUpdateTimerCb, this);
+    ROS_INFO("Initialized TaskMaster");
+
+    // Start state machine
+    TaskMaster::PlannerFSM::start();
   }
+
+  // 1. Event Declarations
+  struct StateUpdateEvent : tinyfsm::Event {
+    bool have_target; // Target goal received
+    bool have_trigger;
+    bool have_odom;
+    bool flag_escape_emergency;
+
+    bool have_recv_pre_agent; // All drones have assigned trajectories
+  };
+
+  // 2. State Machine Base Class Declaration
+  class PlannerFSM : public tinyfsm::Fsm<PlannerFSM>
+  {
+  public:
+    virtual void react(StateUpdateEvent const &) {};
+    // alternative: enforce handling of Toggle in all states (pure virtual)
+    // virtual void react(StateUpdateEvent const &) = 0;
+
+    virtual void entry(void) {};  /* entry actions in some states */
+    void exit(void) {}; /* no exit actions*/
+
+    int current_state = 0;
+  };
+
+  // 3. State Declarations
+  class INIT : public PlannerFSM
+  {
+    void entry() override {
+      std::cout << "Entered INIT" << std::endl;
+    }
+
+    void react(StateUpdateEvent const& event) override {
+      if (!event.have_odom) {
+        // goto force_return; // return;
+      }
+      else {
+        transit<WAIT_TARGET>();
+      }
+    }
+
+    const std::string state_name_{"Init"}; 
+  };
+
+  class WAIT_TARGET : public PlannerFSM
+  {
+    void entry() override {
+      std::cout << "Entered WAIT_TARGET" << std::endl;
+    }
+
+    void react(StateUpdateEvent const& event) override {
+      if (event.have_target && event.have_trigger){
+        transit<SEQUENTIAL_START>();
+      }
+      else {
+        // goto force_return; // return;
+      }
+    }
+
+    const std::string state_name_{"Init"}; 
+  };
+
+  class SEQUENTIAL_START : public PlannerFSM
+  {
+    void entry() override {
+      std::cout << "Entered SEQUENTIAL_START" << std::endl;
+    }
+
+    void react(StateUpdateEvent const& event) override {
+      if (event.have_recv_pre_agent) {
+        // if (planFromGlobalTraj(10)) {
+        //   transit<EXEC_TRAJ>();
+        // }
+        // else {
+        //   transit<SEQUENTIAL_START>();
+        // }
+      }
+    }
+
+    const std::string state_name_{"Init"}; 
+  };
+
+  StateUpdateEvent state_update_event_;
+
+  /* Helper functions */
+
+  // Print current state of FSM
+  void print_current_state() {
+    // TODO Perhaps use a std::map to solve this problem
+    std::string current_state{""};
+
+    if (PlannerFSM::is_in_state<INIT>()){
+      current_state = "INIT";
+    }
+    else if (PlannerFSM::is_in_state<WAIT_TARGET>()){
+      current_state = "WAIT_TARGET";
+    }
+    else if (PlannerFSM::is_in_state<SEQUENTIAL_START>()) {
+      current_state = "SEQUENTIAL_START";
+    }
+    else {
+      current_state = "UNDEFINED";
+    }
+
+    std::cout << "Current state: " << current_state << std::endl;
+  }
+
+private:
+
+  void odometryCb(const nav_msgs::OdometryConstPtr &msg) {
+    state_update_event_.have_odom = true;
+  }
+
+  void FSMUpdateTimerCb(const ros::TimerEvent &e) {
+    TaskMaster::PlannerFSM::dispatch(state_update_event_);
+
+    print_current_state();
+  }
+
+  /* Planning Methods */
+  bool planFromGlobalTraj(const int trial_times) 
+  {
+    return true;
+  }
+
+  // Subscribers
+  ros::Subscriber odom_sub_;
+
+  // Timer to execute FSM Update callback
+  ros::Timer fsm_update_timer_;
+
+  // Parameters
+  int drone_id{0};
 };
 
-const auto is_fin_valid = [](const fin& fin_event) { 
-  if (fin_event.valid){
-    return true; 
-  }
-  else {
-    std::cout << "Invalid fin" << std::endl;
-    return false;
-  }
-};
+FSM_INITIAL_STATE(TaskMaster::PlannerFSM, TaskMaster::INIT)
 
-// actions
-const auto send_fin = [] {
-  std::cout << "sent fin" << std::endl;
-};
-// const auto send_ack = [] {
-//   std::cout << "sent ack" << std::endl;
-// };
-struct send_ack {
-  void operator()() noexcept {
-    std::cout << "sent ack" << std::endl;
-  }
-};
+int main(int argc, char** argv) {
 
-// States
-class established;
-class fin_wait_1;
-class fin_wait_2;
-class timed_wait;
+  ros::init(argc, argv, "ego_planner_node");
+  ros::NodeHandle nh("~");
 
-struct hello_world {
-  auto operator()() const {
-    using namespace sml;
-    // clang-format off
-    return make_transition_table(
-      *state<established> + event<release> / send_fin = state<fin_wait_1>,
-       state<fin_wait_1> + event<ack> [ is_ack_valid ] = state<fin_wait_2>,
-       state<fin_wait_2> + event<fin> [ is_fin_valid ] / send_ack() = state<timed_wait>,
-       state<timed_wait> + event<timeout> / send_ack() = X
-    );
-    // clang-format on
-  }
-};
-}
+  TaskMaster task_mstr;
+  
+  task_mstr.init(nh);
 
-int main() {
-  using namespace sml;
+  ros::spin();
 
-  sm<hello_world> sm;
-  assert(sm.is(state<established>));
+  return 0;
 
-  sm.process_event(release{});
-  assert(sm.is(state<fin_wait_1>));
-
-  sm.process_event(ack{true});
-  assert(sm.is(state<fin_wait_2>));
-
-  sm.process_event(fin{42,true});
-  assert(sm.is(state<timed_wait>));
-
-  sm.process_event(timeout{});
-  assert(sm.is(X));  // released
 }
