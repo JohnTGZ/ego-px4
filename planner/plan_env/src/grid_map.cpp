@@ -417,6 +417,7 @@ void GridMap::updateOccupancyCallback(const ros::TimerEvent & /*event*/)
 void GridMap::depthPoseCallback(const sensor_msgs::ImageConstPtr &img,
                                 const geometry_msgs::PoseStampedConstPtr &pose)
 {
+  ROS_INFO("DEPTH POSE CALLBACK!");
   /* get depth image */
   cv_bridge::CvImagePtr cv_ptr;
   cv_ptr = cv_bridge::toCvCopy(img, img->encoding);
