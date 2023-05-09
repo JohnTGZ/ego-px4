@@ -287,7 +287,9 @@ namespace ego_planner
     {
       // Restart the target and trigger
       have_target_ = false;
-      have_trigger_ = false;
+
+      // TODO: Disabled trigger here
+      // have_trigger_ = false;
 
       if (target_type_ == TARGET_TYPE::PRESET_TARGET)
       {

@@ -44,6 +44,13 @@ make distclean
 ```
 
 # Quick start
+```bash
+# Taking off
+rostopic pub /traj_server_event std_msgs/Int8 "data: 0" --once
+# Taking Mission
+rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
+```
+
 
 # EGOSwarm V2 modifications
 
@@ -62,20 +69,24 @@ make distclean
 
 9. Moved `poscmd_2_odom` and `odom_visualization` nodes from simulator.xml up one level to advanced_param.xml
 10. Create another node just to transform point clouds to add publishing of point clouds from depth camera transformed from `camera_link` to `map` frame
+11. Added a "complete" state machine to trajectory server with safety features such as Emergency stop and the ability to switch between HOVER and MISSION mode.
+12. Fixed transformation between camera_link and base_link
 
 ## Changes TODO
-2. FSM to correspond to that of PX4's flight mode
-    - Enable offboard mode
-    - SHould not have to use ego_gz_bridge_node
-3. Investigate how to accept point clouds within `camera_link` frame from the gridmap.
-4. Correct odom to be in `camera_link` frame
-5. Extend to multiple drones
-1. Send the trajectories to `pbtm` instead of to `traj_server`
+1. Test out with using just cloud topic
+    - It seems to be insufficient as the gridmap also relies on the depth image and performs ray casting
+2. Need to provide either camera pose or odom. Might require another node to subscribe to the transform and publish the pose 
+2. Look at transform issue between base_link and map, how to broadcast that transform properly? Maybe look at XTDrone simulation?
+    - Use GPS ground truth?
+3. Replanning does not take into account the current position of the drone? Why is that so?
+6. Extend to multiple drones
 
 ## Issues
 1. Start of planned trajectory is not based on the drone's actual position but rather the drone's predicted position.
 2. Drone deviates significantly from trajectory path (Perhaps because we are sending PVA commands directly to the PX4 controller, and the controller model used in the egoswarm repo might not fit the actual dynamics of the drone)
 3. Drone's heading does not always face it's direction of travel (results in depth camera not facing the direction of travel)
+
+4. Disabling of offboard mode for land state would be a good feature. Current challenge to implement it is to make sure that the drone has actually landed (Otherwise it will be stuck in AUTO.LOITER while hovering in the air, being unable to disarm).
 
 
 ## Future TODO

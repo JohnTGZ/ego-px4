@@ -182,20 +182,34 @@ public:
   inline bool isKnownFree(const Eigen::Vector3i &id);
   inline bool isKnownOccupied(const Eigen::Vector3i &id);
 
+  // Initialize the GridMap class and it's callbacks
   void initMap(ros::NodeHandle &nh);
+
+  /** Helper methods */
+  
+  bool hasDepthObservation();
+  bool odomValid();
+
+  // Get map origin and size
+  void getRegion(Eigen::Vector3d &ori, Eigen::Vector3d &size);
+  
+  // Get map origin resolution
+  inline double getResolution();
+
+  // Get map origin
+  Eigen::Vector3d getOrigin();
+
+  // Get total size of voxels in the map
+  int getVoxelNum() {
+    return mp_.map_voxel_num_[0] * mp_.map_voxel_num_[1] * mp_.map_voxel_num_[2];
+  }
+
+  bool getOdomDepthTimeout() { return md_.flag_depth_odom_timeout_; }
+
+  /** Publisher methods */
 
   void publishMap();
   void publishMapInflate(bool all_info = false);
-
-  void publishDepth();
-
-  bool hasDepthObservation();
-  bool odomValid();
-  void getRegion(Eigen::Vector3d &ori, Eigen::Vector3d &size);
-  inline double getResolution();
-  Eigen::Vector3d getOrigin();
-  int getVoxelNum();
-  bool getOdomDepthTimeout() { return md_.flag_depth_odom_timeout_; }
 
   typedef std::shared_ptr<GridMap> Ptr;
 
@@ -205,12 +219,24 @@ private:
   MappingParameters mp_;
   MappingData md_;
 
+  /**
+   * Callbacks
+  */
+
   // get depth image and camera pose
   void depthPoseCallback(const sensor_msgs::ImageConstPtr &img,
                          const geometry_msgs::PoseStampedConstPtr &pose);
+
+  // VINS estimation callback
   void extrinsicCallback(const nav_msgs::OdometryConstPtr &odom);
+
+  // Callback to image and odometry of camera
   void depthOdomCallback(const sensor_msgs::ImageConstPtr &img, const nav_msgs::OdometryConstPtr &odom);
+
+  // Callback to point cloud  
   void cloudCallback(const sensor_msgs::PointCloud2ConstPtr &img);
+  
+  // Callback to camera odom
   void odomCallback(const nav_msgs::OdometryConstPtr &odom);
 
   // update occupancy by raycasting

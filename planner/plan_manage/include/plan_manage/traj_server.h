@@ -15,6 +15,8 @@
 
 using namespace Eigen;
 
+
+// TODO Add Emergency state
 /* State machine  */
 enum ServerState
 {
@@ -23,16 +25,20 @@ enum ServerState
   TAKEOFF,
   LAND,
   HOVER,
-  MISSION
+  MISSION,
+  E_STOP,
 };
 
+// TODO Add Emergency stop
 /* State machine  */
 enum ServerEvent
 {
-  TAKEOFF,
-  LAND,
-  READY_FOR_MISSION,
-  EMPTY,
+  TAKEOFF_E,        // 0
+  LAND_E,           // 1
+  MISSION_E,        // 2
+  CANCEL_MISSION_E, // 3
+  E_STOP_E,         // 4
+  EMPTY_E,          // 5
 };
 
 
@@ -60,118 +66,110 @@ public:
   void serverEventCb(const std_msgs::Int8::ConstPtr & msg);
 
   /**
-   * Timer callback to generate PVA commands for executing trajectory
+   * Timer callback to generate PVA commands for executing trajectory.
+   * It will determine what sort of trajectory execution (takeoff, landing, hover, mission etc.)
+   * based on the current state of the state machine.
   */
   void execTrajTimerCb(const ros::TimerEvent &e);
 
   /**
    * Timer callback to tick State Machine
+   * This callback should only ever handle transitions between states,
+   * It should not attempt to call any trajectory execution function, this 
+   * should be left to the execTrajTimerCb callback.
   */
-  void tickSMTimerCb(const ros::TimerEvent &e);
-
-  /* Helper methods */
-
-  /**
-   * Publish PVA (Position, Velocity, Acceleration) commands
-  */
-  void publish_cmd(Vector3d p, Vector3d v, Vector3d a, Vector3d j, double yaw, double yaw_rate);
-
-  std::pair<double, double> calculate_yaw(double t_cur, Eigen::Vector3d &pos, double dt);
+  void tickServerStateTimerCb(const ros::TimerEvent &e);
 
   /* Trajectory execution methods */
 
   /**
-   * Take off 
+   * Execute take off 
   */
   void execTakeOff();
 
   /**
-   * Hover
+   * Execute hover
   */
   void execHover();
 
   /**
-   * Landing
+   * Execute landing
   */
   void execLand();
 
   /**
    * Execute Mission Trajectory
   */
-  void execMissionTraj();
+  void execMission();
+
+  /**
+   * Start a mission
+  */
+  void startMission();
+
+  /**
+   * End the current mission.
+   * For all purposes and intent, ending the mission is same as cancelling it.
+  */
+  void endMission();
+
+  /* Conditional checking methods */
+
+  /**
+   * Check if landing execution is complete
+  */
+  bool isLanded();
+
+  /**
+   * Check if take off execution is complete
+  */
+  bool isTakenOff();
+
+  /**
+   * Check if mission execution is complete.
+  */
+  bool isMissionComplete();
+
+  /**
+   * Check if heartbeat from planner has timed out
+  */
+  bool isPlannerHeartbeatTimeout();
+
+  /* Helper methods */
+
+  /**
+   * Publish PVA (Position, Velocity, Acceleration) commands
+  */
+  void publish_cmd(
+    Vector3d p, Vector3d v, Vector3d a, 
+    Vector3d j, double yaw, double yaw_rate, 
+    uint16_t type_mask = 0);
+
+  std::pair<double, double> calculate_yaw(double t_cur, Eigen::Vector3d &pos, double dt);
 
   /**
    * Send request for PX4 to switch to offboard mode and arm
   */
-  bool enable_offboard_mode()
-  {
-    mavros_msgs::CommandBool arm_cmd;
-    arm_cmd.request.value = true;
+  bool toggle_offboard_mode(bool toggle);
 
-    // Make sure takeoff is not immediately sent, 
-    // this will help to stream the correct data to the program first.
-    // Will give a 1sec buffer
-    // ros::Duration(1.0).sleep();
-
-    ros::Rate rate(1/pub_cmd_freq_);
-
-    // send a few setpoints before starting
-    for (int i = 10; ros::ok() && i > 0; --i)
-    {
-      publish_cmd(last_pos_, Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), last_yaw_, 0);
-      ros::spinOnce();
-      rate.sleep();
-    }
-
-    mavros_msgs::SetMode offb_set_mode;
-    offb_set_mode.request.custom_mode = "OFFBOARD";
-
-    bool is_offboard_and_armed = (uav_current_state_.mode == "OFFBOARD") && uav_current_state_.armed;
-    ros::Time last_request_t = ros::Time::now();
-
-    while (!is_offboard_and_armed){
-      bool request_timeout = (ros::Time::now() - last_request_t > ros::Duration(2.0));
-
-      if (uav_current_state_.mode != "OFFBOARD" && request_timeout)
-      {
-        ROS_INFO_NAMED(node_name_, "Setting offboard mode");
-        if (set_mode_client.call(offb_set_mode) && offb_set_mode.response.mode_sent)
-        {
-          ROS_INFO_NAMED(node_name_, "Successfully set offboard mode");
-        }
-
-        last_request_t = ros::Time::now();
-      }
-      else if (!uav_current_state_.armed && request_timeout) 
-      {
-        ROS_INFO_NAMED(node_name_, "Arming...");
-
-        if (arming_client.call(arm_cmd) && arm_cmd.response.success)
-        {
-          ROS_INFO_NAMED(node_name_, "Successfully armed.");
-        }
-
-        last_request_t = ros::Time::now();
-      }
-
-      is_offboard_and_armed = (uav_current_state_.mode == "OFFBOARD") && uav_current_state_.armed;
-
-      ros::spinOnce();
-      rate.sleep();        
-    }
-
+  /**
+   * Checks if UAV state is:
+   * 1. In OFFBOARD mode 
+   * 2. ARMED
+  */
+  bool is_uav_ready() {
+    return (uav_current_state_.mode == "OFFBOARD") 
+      && uav_current_state_.armed;
   }
 
   /**
    * Checks if UAV state is:
-   * 1. Connected
-   * 2. In OFFBOARD mode 
-   * 3. ARMED
+   * 1. In "AUTO.LOITER" mode 
+   * 2. DISARMED
   */
-  bool is_uav_ready() {
-    return (uav_current_state_.mode == "OFFBOARD") 
-      && uav_current_state_.armed 
-      && uav_current_state_.connected;
+  bool is_uav_idle() {
+    return (uav_current_state_.mode == "AUTO.LOITER") 
+      && !uav_current_state_.armed;
   }
 
   /** @brief StateToString interprets the input server state **/
@@ -185,6 +183,7 @@ public:
           case ServerState::LAND: return "LAND";
           case ServerState::HOVER:   return "HOVER";
           case ServerState::MISSION:   return "MISSION";
+          case ServerState::E_STOP:   return "E_STOP";
           default:      return "[Unknown State]";
       }
   }
@@ -194,25 +193,28 @@ public:
   {
       switch (state)
       {
-          case ServerEvent::TAKEOFF:   return "TAKEOFF";
-          case ServerEvent::LAND: return "LAND";
-          case ServerEvent::READY_FOR_MISSION:   return "READY_FOR_MISSION";
-          case ServerEvent::EMPTY:   return "EMPTY";
+          case ServerEvent::TAKEOFF_E:   return "TAKEOFF";
+          case ServerEvent::LAND_E: return "LAND";
+          case ServerEvent::MISSION_E:   return "MISSION";
+          case ServerEvent::EMPTY_E:   return "EMPTY";
+          case ServerEvent::E_STOP_E:   return "E_STOP";
           default:      return "[Unknown Event]";
       }
   }
 
   /* Send a server event to be processed by the state machine*/
-  void setEvent(ServerEvent event);
+  void setServerEvent(ServerEvent event);
 
   /* Retrieve a server event to be processed by the state machine,
   it will then set the event to be EMPTY, which prevents further processing*/
-  ServerEvent getEvent();
+  ServerEvent getServerEvent();
 
-  /** Transition state machine to new_state */
+  /** Transition state machine to new_state.
+   * This should ONLY be called within tickServerStateTimerCb.
+   */
   void setServerState(ServerState new_state); 
 
-  /** Transition state machine to new_state */
+  /** get current server state */
   ServerState getServerState(); 
 
 private:
@@ -236,23 +238,24 @@ private:
   ros::ServiceClient arming_client, set_mode_client; 
 
   /* Stored data*/
-  ServerEvent server_event_{ServerEvent::EMPTY};
+  ServerEvent server_event_{ServerEvent::EMPTY_E};
   ServerState server_state_{ServerState::INIT};
   mavros_msgs::State uav_current_state_;
 
   geometry_msgs::PoseStamped uav_pose_;
   boost::shared_ptr<poly_traj::Trajectory> traj_;
-  Eigen::Vector3d last_pos_;
+  Eigen::Vector3d last_mission_pos_;
 
   // yaw control
-  double last_yaw_{0.0}, last_yawdot_{0.0};
+  double last_mission_yaw_{0.0}, last_mission_yaw_dot_{0.0};
 
   // Flags
-  bool receive_traj_ = false;
   double traj_duration_;
   ros::Time start_time_;
-  int traj_id_;
   ros::Time heartbeat_time_{0};
+
+  bool mission_completed_{true};
+  // bool heartbeat_timeout_{true};
 
   // Params
   std::string node_name_{"traj_server"};
@@ -260,6 +263,10 @@ private:
   double pub_cmd_freq_; // Frequency to publish PVA commands
   double sm_tick_freq_; // Frequency to tick the state machine transitions
 
-  double takeoff_height_; // Default height to take off to
+  double planner_heartbeat_timeout_{0.5}; // Planner heartbeat timeout
+
+  double takeoff_height_{0.0}; // Default height to take off to
+  double landed_height_{0.05}; // We assume that the ground is even (z = 0)
+  double take_off_landing_tol_{0.05};
 
 };

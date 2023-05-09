@@ -1,6 +1,6 @@
-<!-- DO NOT EDIT: Generated from iris.sdf.jinja -->
+<?xml version="1.0" ?>
 <sdf version='1.6'>
-  <model name='iris'>
+  <model name='iris_demo'>
     <link name='base_link'>
       <pose>0 0 0 0 0 0</pose>
       <inertial>
@@ -345,11 +345,52 @@
         <use_parent_model_frame>1</use_parent_model_frame>
       </axis>
     </joint>
+
+    <!-- Camera link and joint -->
+
+    <!-- <include>
+      <uri>model://realsense_camera</uri>
+      <pose>0.1 0 0 0 0 0</pose>
+    </include>
+
+    <joint name="realsense_camera_joint" type="revolute">
+      <child>realsense_camera::link</child>
+      <parent>base_link</parent>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <upper>0</upper>
+          <lower>0</lower>
+        </limit>
+      </axis>
+    </joint> -->
+
+    <include>
+      <uri>model://depth_camera</uri>
+      <pose>0.1 0 0 0 0 0</pose>
+    </include>
+    <joint name="depth_camera_joint" type="revolute">
+      <child>depth_camera::link</child>
+      <parent>base_link</parent>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <upper>0</upper>
+          <lower>0</lower>
+        </limit>
+      </axis>
+    </joint>
+
+    <!-- Plugins -->
+
     <plugin name='rosbag' filename='libgazebo_multirotor_base_plugin.so'>
       <robotNamespace/>
       <linkName>base_link</linkName>
       <rotorVelocitySlowdownSim>10</rotorVelocitySlowdownSim>
     </plugin>
+
+    <!-- Motors -->
+
     <plugin name='front_right_motor_model' filename='libgazebo_motor_model.so'>
       <robotNamespace/>
       <jointName>rotor_0_joint</jointName>
@@ -418,6 +459,9 @@
       <motorSpeedPubTopic>/motor_speed/3</motorSpeedPubTopic>
       <rotorVelocitySlowdownSim>10</rotorVelocitySlowdownSim>
     </plugin>
+
+    <!-- GPS -->
+
     <include>
       <uri>model://gps</uri>
       <pose>0.1 0 0 0 0 0</pose>
@@ -427,6 +471,14 @@
       <child>gps0::link</child>
       <parent>base_link</parent>
     </joint>
+
+    <plugin name='gps_plugin' filename='libgazebo_gps_plugin.so'>
+      <robotNamespace/>
+      <gpsNoise>1</gpsNoise>
+    </plugin>
+
+    <!-- Other sensors -->
+
     <plugin name='groundtruth_plugin' filename='libgazebo_groundtruth_plugin.so'>
       <robotNamespace/>
     </plugin>
@@ -448,6 +500,7 @@
       <robotNamespace/>
       <imuSubTopic>/imu</imuSubTopic>
       <magSubTopic>/mag</magSubTopic>
+      <gpsSubTopic>/gps</gpsSubTopic>
       <baroSubTopic>/baro</baroSubTopic>
       <mavlink_addr>INADDR_ANY</mavlink_addr>
       <mavlink_tcp_port>4560</mavlink_tcp_port>

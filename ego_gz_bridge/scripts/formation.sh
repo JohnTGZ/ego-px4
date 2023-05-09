@@ -8,7 +8,10 @@ SOURCE_WS="source $SCRIPT_DIR/../../../../devel/setup.bash &&"
 
 CMD_0="roslaunch ego_gz_bridge rviz.launch"
 CMD_1="roslaunch ego_planner demo.launch"
-CMD_2=""
+CMD_2="roslaunch ego_planner trajectory_server.launch"
+CMD_3="rostopic pub /traj_server_event std_msgs/Int8 \"data: 0 \" "
+
+# rostopic pub /traj_server_event std_msgs/Int8 "data: 0" 
 
 if [ "$SESSIONEXISTS" = "" ]
 then 
@@ -22,6 +25,7 @@ then
     sleep 2
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
     tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
+    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" 
 fi
 
 # Attach session on the first window
