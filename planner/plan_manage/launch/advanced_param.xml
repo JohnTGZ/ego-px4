@@ -54,10 +54,13 @@
         <!-- We only use either the camera_pose_topic and depth_topic OR 
         the cloud_topic -->
         <remap from="~grid_map/pose"  to = "$(arg camera_pose_topic)"/>
-
         <remap from="~grid_map/depth" to = "$(arg depth_topic)"/>
 
         <remap from="~grid_map/cloud" to="$(arg cloud_topic)"/>
+        
+        <remap from="~grid_map/global_cam_pose"  to = "$(arg camera_pose_topic)"/>
+        <remap from="~grid_map/camera_depth"  to = "$(arg depth_topic)"/>
+
 
         <!-- //////////////////// -->
         <!-- EGOReplanFSM params -->

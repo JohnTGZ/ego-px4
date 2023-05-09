@@ -71,10 +71,10 @@ public:
 
     if (!base_link_to_cam_tf_init_){
       geometry_msgs::TransformStamped tf_between_frames_msg;
-      if (!getTransform("base_link", "camera_link", tf_between_frames_msg)){
+      if (!getTransform("world", "camera_link", tf_between_frames_msg)){
         return;
       }
-      camera_pos_msg_.header.frame_id = "base_link";
+      camera_pos_msg_.header.frame_id = "world";
       camera_pos_msg_.header.stamp = ros::Time::now(); 
 
       camera_pos_msg_.pose.position.x = tf_between_frames_msg.transform.translation.x;

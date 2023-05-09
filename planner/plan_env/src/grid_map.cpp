@@ -106,12 +106,12 @@ void GridMap::initMap(ros::NodeHandle &nh)
   if (mp_.pose_type_ == POSE_STAMPED)
   {
     ROS_ERROR("POSE STAMPED TYPE");
-    pose_sub_.reset(
-        new message_filters::Subscriber<geometry_msgs::PoseStamped>(node_, "grid_map/pose", 25));
+    // pose_sub_.reset(
+    //     new message_filters::Subscriber<geometry_msgs::PoseStamped>(node_, "grid_map/pose", 25));
 
-    sync_image_pose_.reset(new message_filters::Synchronizer<SyncPolicyImagePose>(
-        SyncPolicyImagePose(100), *depth_sub_, *pose_sub_));
-    sync_image_pose_->registerCallback(boost::bind(&GridMap::depthPoseCallback, this, _1, _2));
+    // sync_image_pose_.reset(new message_filters::Synchronizer<SyncPolicyImagePose>(
+    //     SyncPolicyImagePose(100), *depth_sub_, *pose_sub_));
+    // sync_image_pose_->registerCallback(boost::bind(&GridMap::depthPoseCallback, this, _1, _2));
   }
   else if (mp_.pose_type_ == ODOMETRY)
   {
@@ -123,6 +123,12 @@ void GridMap::initMap(ros::NodeHandle &nh)
         SyncPolicyImageOdom(100), *depth_sub_, *odom_sub_));
     sync_image_odom_->registerCallback(boost::bind(&GridMap::depthOdomCallback, this, _1, _2));
   }
+
+  // Subscribe to global pose of camera
+  global_cam_pose_sub_ = node_.subscribe<geometry_msgs::PoseStamped>("grid_map/global_cam_pose", 10, &GridMap::globalCamPoseSub, this);
+
+  // Subscribe to depth image of camera
+  cam_depth_sub_ = node_.subscribe<sensor_msgs::Image>("grid_map/camera_depth", 25, &GridMap::camDepthCallback, this);
 
   // Independent subscription to camera odometry and point cloud
   indep_cloud_sub_ =
@@ -414,10 +420,38 @@ void GridMap::updateOccupancyCallback(const ros::TimerEvent & /*event*/)
 
 /** Subscriber callbacks */
 
-void GridMap::depthPoseCallback(const sensor_msgs::ImageConstPtr &img,
-                                const geometry_msgs::PoseStampedConstPtr &pose)
+void GridMap::odomCallback(const nav_msgs::OdometryConstPtr &odom)
 {
-  ROS_INFO("DEPTH POSE CALLBACK!");
+  if (md_.has_first_depth_)
+    return;
+
+  md_.camera_pos_(0) = odom->pose.pose.position.x;
+  md_.camera_pos_(1) = odom->pose.pose.position.y;
+  md_.camera_pos_(2) = odom->pose.pose.position.z;
+
+  md_.has_odom_ = true;
+}
+
+void GridMap::globalCamPoseSub(const geometry_msgs::PoseStampedConstPtr &msg)
+{
+  if (msg->header.frame_id != "world")
+  {
+    ROS_ERROR("Camera global pose must be in the 'world' frame");
+    return;
+  }
+
+  md_.camera_pos_(0) = msg->pose.position.x;
+  md_.camera_pos_(1) = msg->pose.position.y;
+  md_.camera_pos_(2) = msg->pose.position.z;
+  
+  md_.camera_r_m_ = Eigen::Quaterniond(msg->pose.orientation.w, msg->pose.orientation.x,
+                                       msg->pose.orientation.y, msg->pose.orientation.z)
+                        .toRotationMatrix();
+
+}
+
+void GridMap::camDepthCallback(const sensor_msgs::ImageConstPtr &img)
+{
   /* get depth image */
   cv_bridge::CvImagePtr cv_ptr;
   cv_ptr = cv_bridge::toCvCopy(img, img->encoding);
@@ -430,13 +464,6 @@ void GridMap::depthPoseCallback(const sensor_msgs::ImageConstPtr &img,
 
   // std::cout << "depth: " << md_.depth_image_.cols << ", " << md_.depth_image_.rows << std::endl;
 
-  /* get pose */
-  md_.camera_pos_(0) = pose->pose.position.x;
-  md_.camera_pos_(1) = pose->pose.position.y;
-  md_.camera_pos_(2) = pose->pose.position.z;
-  md_.camera_r_m_ = Eigen::Quaterniond(pose->pose.orientation.w, pose->pose.orientation.x,
-                                       pose->pose.orientation.y, pose->pose.orientation.z)
-                        .toRotationMatrix();
   if (isInMap(md_.camera_pos_))
   {
     ROS_INFO("depthPoseCallback: IN MAP");
@@ -451,18 +478,6 @@ void GridMap::depthPoseCallback(const sensor_msgs::ImageConstPtr &img,
   }
 
   md_.flag_use_depth_fusion = true;
-}
-
-void GridMap::odomCallback(const nav_msgs::OdometryConstPtr &odom)
-{
-  if (md_.has_first_depth_)
-    return;
-
-  md_.camera_pos_(0) = odom->pose.pose.position.x;
-  md_.camera_pos_(1) = odom->pose.pose.position.y;
-  md_.camera_pos_(2) = odom->pose.pose.position.z;
-
-  md_.has_odom_ = true;
 }
 
 void GridMap::cloudCallback(const sensor_msgs::PointCloud2ConstPtr &img)
@@ -614,6 +629,45 @@ void GridMap::depthOdomCallback(const sensor_msgs::ImageConstPtr &img,
   cv_ptr->image.copyTo(md_.depth_image_);
 
   md_.occ_need_update_ = true;
+  md_.flag_use_depth_fusion = true;
+}
+
+void GridMap::depthPoseCallback(const sensor_msgs::ImageConstPtr &img,
+                                const geometry_msgs::PoseStampedConstPtr &pose)
+{
+  ROS_INFO("DEPTH POSE CALLBACK!");
+  /* get depth image */
+  cv_bridge::CvImagePtr cv_ptr;
+  cv_ptr = cv_bridge::toCvCopy(img, img->encoding);
+
+  if (img->encoding == sensor_msgs::image_encodings::TYPE_32FC1)
+  {
+    (cv_ptr->image).convertTo(cv_ptr->image, CV_16UC1, mp_.k_depth_scaling_factor_);
+  }
+  cv_ptr->image.copyTo(md_.depth_image_);
+
+  // std::cout << "depth: " << md_.depth_image_.cols << ", " << md_.depth_image_.rows << std::endl;
+
+  /* get pose */
+  md_.camera_pos_(0) = pose->pose.position.x;
+  md_.camera_pos_(1) = pose->pose.position.y;
+  md_.camera_pos_(2) = pose->pose.position.z;
+  md_.camera_r_m_ = Eigen::Quaterniond(pose->pose.orientation.w, pose->pose.orientation.x,
+                                       pose->pose.orientation.y, pose->pose.orientation.z)
+                        .toRotationMatrix();
+  if (isInMap(md_.camera_pos_))
+  {
+    ROS_INFO("depthPoseCallback: IN MAP");
+    md_.has_odom_ = true;
+    md_.update_num_ += 1;
+    md_.occ_need_update_ = true;
+  }
+  else
+  {
+    ROS_INFO("depthPoseCallback: NOT IN MAP");
+    md_.occ_need_update_ = false;
+  }
+
   md_.flag_use_depth_fusion = true;
 }
 

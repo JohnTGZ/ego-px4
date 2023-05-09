@@ -253,6 +253,11 @@ private:
   int setCacheOccupancy(Eigen::Vector3d pos, int occ);
   Eigen::Vector3d closetPointInMap(const Eigen::Vector3d &pt, const Eigen::Vector3d &camera_pt);
 
+  // Subscriptions to camera global pose and depth image
+
+  void globalCamPoseSub(const geometry_msgs::PoseStampedConstPtr &msg);
+  void camDepthCallback(const sensor_msgs::ImageConstPtr &img);
+
   // typedef message_filters::sync_policies::ExactTime<sensor_msgs::Image,
   // nav_msgs::Odometry> SyncPolicyImageOdom; typedef
   // message_filters::sync_policies::ExactTime<sensor_msgs::Image,
@@ -270,6 +275,9 @@ private:
   shared_ptr<message_filters::Subscriber<nav_msgs::Odometry>> odom_sub_;
   SynchronizerImagePose sync_image_pose_;
   SynchronizerImageOdom sync_image_odom_;
+
+  ros::Subscriber global_cam_pose_sub_;
+  ros::Subscriber cam_depth_sub_;
 
   ros::Subscriber indep_cloud_sub_, indep_odom_sub_, extrinsic_sub_;
   ros::Publisher map_pub_, map_inf_pub_;

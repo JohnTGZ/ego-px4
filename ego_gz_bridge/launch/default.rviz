@@ -37,7 +37,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: occupancy
+    SyncSource: PointCloud2
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -254,7 +254,7 @@ Visualization Manager:
               Marker Topic: /drone_0_odom_visualization/robot
               Name: robot
               Namespaces:
-                mesh: true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Image
@@ -276,7 +276,7 @@ Visualization Manager:
           Marker Topic: /drone_0_odom_visualization/velocity
           Name: velocity
           Namespaces:
-            velocity: true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -284,7 +284,7 @@ Visualization Manager:
           Marker Topic: /drone_0_odom_visualization/sensor
           Name: sensor
           Namespaces:
-            sensor: true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -292,7 +292,7 @@ Visualization Manager:
           Marker Topic: /drone_0_odom_visualization/trajectory
           Name: trajectory
           Namespaces:
-            trajectory: true
+            {}
           Queue Size: 100
           Value: true
       Enabled: true
@@ -737,9 +737,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: -0.05020349100232124
+      Pitch: 0.7847965955734253
       Target Frame: my_view
-      Yaw: 3.0758917331695557
+      Yaw: 3.5458929538726807
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:
