@@ -105,6 +105,7 @@ void GridMap::initMap(ros::NodeHandle &nh)
 
   if (mp_.pose_type_ == POSE_STAMPED)
   {
+    ROS_ERROR("POSE STAMPED TYPE");
     pose_sub_.reset(
         new message_filters::Subscriber<geometry_msgs::PoseStamped>(node_, "grid_map/pose", 25));
 
@@ -114,6 +115,8 @@ void GridMap::initMap(ros::NodeHandle &nh)
   }
   else if (mp_.pose_type_ == ODOMETRY)
   {
+    ROS_ERROR("ODOMETRY TYPE");
+
     odom_sub_.reset(new message_filters::Subscriber<nav_msgs::Odometry>(node_, "grid_map/odom", 100, ros::TransportHints().tcpNoDelay()));
 
     sync_image_odom_.reset(new message_filters::Synchronizer<SyncPolicyImageOdom>(
@@ -442,6 +445,7 @@ void GridMap::depthPoseCallback(const sensor_msgs::ImageConstPtr &img,
   }
   else
   {
+    ROS_INFO("depthPoseCallback: NOT IN MAP");
     md_.occ_need_update_ = false;
   }
 
