@@ -18,6 +18,7 @@ This package contains the bridge to link Egoswarm V2 algorithms, the gazebo simu
 ```bash 
 export ROS_DISTRO="noetic"
 
+sudo apt install tmux -y
 sudo apt install python3-vcstool -y
 sudo apt install ros-noetic-tf2-sensor-msgs -y
 sudo apt-get install protobuf-compiler libeigen3-dev libopencv-dev -y
@@ -34,7 +35,7 @@ vcs import < thirdparty.repos --recursive
 3. Install PX4 firmware
 ```bash
 # cd to PX4-Autopilot repo
-cd ../../PX4-Autopilot
+cd ../../../PX4-Autopilot
 bash ./Tools/setup/ubuntu.sh --no-nuttx
 # Make SITL target for Gazebo simulation
 DONT_RUN=1 make px4_sitl_default gazebo-classic

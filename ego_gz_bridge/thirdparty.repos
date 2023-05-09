@@ -1,9 +1,5 @@
 repositories:
-  ../../PX4-Autopilot:
+  ../../../PX4-Autopilot:
     type: git
     url: https://github.com/PX4/PX4-Autopilot.git
-    version: main
-  ../../EGO-Planner-v2:
-    type: git
-    url: https://github.com/ZJU-FAST-Lab/EGO-Planner-v2.git
     version: main
