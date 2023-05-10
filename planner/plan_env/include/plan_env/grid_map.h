@@ -103,6 +103,8 @@ struct MappingData
 
   Eigen::Vector3d camera_pos_, last_camera_pos_;
   Eigen::Matrix3d camera_r_m_, last_camera_r_m_;
+
+  // Transformation of camera to body frame
   Eigen::Matrix4d cam2body_;
 
   // depth image data

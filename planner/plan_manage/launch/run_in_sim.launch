@@ -23,7 +23,8 @@
         <!-- depth topic: depth image, 640x480 by default -->
         <!-- don't set cloud_topic if you already set these ones! -->
         <arg name="depth_topic" value="/iris_depth_camera/camera/depth/image_raw"/>
-        <arg name="camera_pose_topic" value="/iris_depth_camera/camera/pose"/>
+        <arg name="camera_pose_topic" value="/mavros/local_position/pose"/>
+        <!-- <arg name="camera_pose_topic" value="/iris_depth_camera/camera/pose"/> -->
         <!-- <arg name="depth_topic" value="pcl_render_node/depth"/> -->
         
         <!-- topic of point cloud measurement, such as from LIDAR  -->

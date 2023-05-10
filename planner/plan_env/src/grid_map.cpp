@@ -93,9 +93,15 @@ void GridMap::initMap(ros::NodeHandle &nh)
   md_.proj_points_cnt = 0;
 
   md_.cam2body_ << 0.0, 0.0, 1.0, 0.0,
-      -1.0, 0.0, 0.0, 0.0,
-      0.0, -1.0, 0.0, 0.0,
-      0.0, 0.0, 0.0, 1.0;
+                  -1.0, 0.0, 0.0, 0.0,
+                  0.0, -1.0, 0.0, 0.0,
+                  0.0, 0.0, 0.0, 1.0;
+
+  // md_.cam2body_ << 1.0, 0.0, 0.0, 0.0,
+                  // 0.0, 1.0, 0.0, 0.0,
+                  // 0.0, 0.0, 1.0, 0.0,
+                  // 0.0, 0.0, 0.0, 1.0;
+
 
   /* init callback */
 
@@ -117,15 +123,15 @@ void GridMap::initMap(ros::NodeHandle &nh)
   {
     ROS_ERROR("ODOMETRY TYPE");
 
-    odom_sub_.reset(new message_filters::Subscriber<nav_msgs::Odometry>(node_, "grid_map/odom", 100, ros::TransportHints().tcpNoDelay()));
+    // odom_sub_.reset(new message_filters::Subscriber<nav_msgs::Odometry>(node_, "grid_map/odom", 100, ros::TransportHints().tcpNoDelay()));
 
-    sync_image_odom_.reset(new message_filters::Synchronizer<SyncPolicyImageOdom>(
-        SyncPolicyImageOdom(100), *depth_sub_, *odom_sub_));
-    sync_image_odom_->registerCallback(boost::bind(&GridMap::depthOdomCallback, this, _1, _2));
+    // sync_image_odom_.reset(new message_filters::Synchronizer<SyncPolicyImageOdom>(
+    //     SyncPolicyImageOdom(100), *depth_sub_, *odom_sub_));
+    // sync_image_odom_->registerCallback(boost::bind(&GridMap::depthOdomCallback, this, _1, _2));
   }
 
   // Subscribe to global pose of camera
-  global_cam_pose_sub_ = node_.subscribe<geometry_msgs::PoseStamped>("grid_map/global_cam_pose", 10, &GridMap::globalCamPoseSub, this);
+  // global_cam_pose_sub_ = node_.subscribe<geometry_msgs::PoseStamped>("grid_map/global_cam_pose", 10, &GridMap::globalCamPoseSub, this);
 
   // Subscribe to depth image of camera
   cam_depth_sub_ = node_.subscribe<sensor_msgs::Image>("grid_map/camera_depth", 25, &GridMap::camDepthCallback, this);
@@ -376,11 +382,11 @@ void GridMap::updateOccupancyCallback(const ros::TimerEvent & /*event*/)
   if (md_.last_occ_update_time_.toSec() < 1.0)
     md_.last_occ_update_time_ = ros::Time::now();
 
-  if (!md_.occ_need_update_)
+  if (!md_.occ_need_update_) // Flag set by camDepthCallback() 
   {
     if (md_.flag_use_depth_fusion && (ros::Time::now() - md_.last_occ_update_time_).toSec() > mp_.odom_depth_timeout_)
     {
-      ROS_ERROR("odom or depth lost! ros::Time::now()=%f, md_.last_occ_update_time_=%f, mp_.odom_depth_timeout_=%f",
+      ROS_ERROR_THROTTLE(1.0, "odom or depth lost! ros::Time::now()=%f, md_.last_occ_update_time_=%f, mp_.odom_depth_timeout_=%f",
                 ros::Time::now().toSec(), md_.last_occ_update_time_.toSec(), mp_.odom_depth_timeout_);
       md_.flag_depth_odom_timeout_ = true;
     }
@@ -392,15 +398,21 @@ void GridMap::updateOccupancyCallback(const ros::TimerEvent & /*event*/)
   // ros::Time t1, t2, t3, t4;
   // t1 = ros::Time::now();
 
+  // ROS_WARN("Calling project depth image");
+
   projectDepthImage();
   // t2 = ros::Time::now();
+
+  // ROS_WARN("Calling raycast process");
+
   raycastProcess();
   // t3 = ros::Time::now();
 
   if (md_.local_updated_){ // This is updated after raycasting
+    // ROS_WARN("Calling clearAndInflateLocalMap");
     clearAndInflateLocalMap();
+    // ROS_WARN("Called clearAndInflateLocalMap");
   }
-
 
   // t4 = ros::Time::now();
 
@@ -422,33 +434,75 @@ void GridMap::updateOccupancyCallback(const ros::TimerEvent & /*event*/)
 
 void GridMap::odomCallback(const nav_msgs::OdometryConstPtr &odom)
 {
-  if (md_.has_first_depth_)
-    return;
+  // if (md_.has_first_depth_)
+  //   return;
 
-  md_.camera_pos_(0) = odom->pose.pose.position.x;
-  md_.camera_pos_(1) = odom->pose.pose.position.y;
-  md_.camera_pos_(2) = odom->pose.pose.position.z;
+  // md_.camera_pos_(0) = odom->pose.pose.position.x;
+  // md_.camera_pos_(1) = odom->pose.pose.position.y;
+  // md_.camera_pos_(2) = odom->pose.pose.position.z;
+
+  Eigen::Quaterniond body_q = Eigen::Quaterniond(odom->pose.pose.orientation.w,
+                                                 odom->pose.pose.orientation.x,
+                                                 odom->pose.pose.orientation.y,
+                                                 odom->pose.pose.orientation.z);
+  Eigen::Matrix3d body_r_m = body_q.toRotationMatrix();
+  Eigen::Matrix4d body2world; // Body of uav to world frame
+  body2world.block<3, 3>(0, 0) = body_r_m;
+  body2world(0, 3) = odom->pose.pose.position.x;
+  body2world(1, 3) = odom->pose.pose.position.y;
+  body2world(2, 3) = odom->pose.pose.position.z;
+  body2world(3, 3) = 1.0;
+
+  // md_.cam2body_ is formed from extrinsicCallback() to "/vins_estimator/extrinsic"
+  // Converts camera to world frame
+  Eigen::Matrix4d cam_T = body2world * md_.cam2body_;
+  md_.camera_pos_(0) = cam_T(0, 3);
+  md_.camera_pos_(1) = cam_T(1, 3);
+  md_.camera_pos_(2) = cam_T(2, 3);
+  md_.camera_r_m_ = cam_T.block<3, 3>(0, 0);
 
   md_.has_odom_ = true;
 }
 
-void GridMap::globalCamPoseSub(const geometry_msgs::PoseStampedConstPtr &msg)
-{
-  if (msg->header.frame_id != "world")
-  {
-    ROS_ERROR("Camera global pose must be in the 'world' frame");
-    return;
-  }
+// void GridMap::globalCamPoseSub(const geometry_msgs::PoseStampedConstPtr &msg)
+// {
+//   if (msg->header.frame_id != "world" && msg->header.frame_id != "map")
+//   {
+//     ROS_ERROR("Camera global pose must be in the 'world' or 'map' frame. Assuming that world and map frame are at the same origin point and orientation");
+//     return;
+//   }
 
-  md_.camera_pos_(0) = msg->pose.position.x;
-  md_.camera_pos_(1) = msg->pose.position.y;
-  md_.camera_pos_(2) = msg->pose.position.z;
+//   // md_.camera_pos_(0) = msg->pose.position.x;
+//   // md_.camera_pos_(1) = msg->pose.position.y;
+//   // md_.camera_pos_(2) = msg->pose.position.z;
   
-  md_.camera_r_m_ = Eigen::Quaterniond(msg->pose.orientation.w, msg->pose.orientation.x,
-                                       msg->pose.orientation.y, msg->pose.orientation.z)
-                        .toRotationMatrix();
+//   // md_.camera_r_m_ = Eigen::Quaterniond(msg->pose.orientation.w, msg->pose.orientation.x,
+//   //                                      msg->pose.orientation.y, msg->pose.orientation.z)
+//   //                       .toRotationMatrix();
 
-}
+
+//   /* get pose */
+//   // Eigen::Quaterniond body_q = Eigen::Quaterniond(msg->pose.orientation.w,
+//   //                                                msg->pose.orientation.x,
+//   //                                                msg->pose.orientation.y,
+//   //                                                msg->pose.orientation.z);
+//   // Eigen::Matrix3d body_r_m = body_q.toRotationMatrix();
+//   // Eigen::Matrix4d body2world; // Body of uav to world frame
+//   // body2world.block<3, 3>(0, 0) = body_r_m;
+//   // body2world(0, 3) = msg->pose.position.x;
+//   // body2world(1, 3) = msg->pose.position.y;
+//   // body2world(2, 3) = msg->pose.position.z;
+//   // body2world(3, 3) = 1.0;
+
+//   // // md_.cam2body_ is formed from extrinsicCallback() to "/vins_estimator/extrinsic"
+//   // // Converts camera to world frame
+//   // Eigen::Matrix4d cam_T = body2world * md_.cam2body_;
+//   // md_.camera_pos_(0) = cam_T(0, 3);
+//   // md_.camera_pos_(1) = cam_T(1, 3);
+//   // md_.camera_pos_(2) = cam_T(2, 3);
+//   // md_.camera_r_m_ = cam_T.block<3, 3>(0, 0);
+
+// }
 
 void GridMap::camDepthCallback(const sensor_msgs::ImageConstPtr &img)
 {
@@ -462,18 +516,26 @@ void GridMap::camDepthCallback(const sensor_msgs::ImageConstPtr &img)
   }
   cv_ptr->image.copyTo(md_.depth_image_);
 
-  // std::cout << "depth: " << md_.depth_image_.cols << ", " << md_.depth_image_.rows << std::endl;
+  // ROS_INFO("Depth: Cols, Rows: (%d, %d)", md_.depth_image_.cols, md_.depth_image_.rows);
+  // ROS_INFO("Map voxel num (%d, %d, %d)", mp_.map_voxel_num_[0], mp_.map_voxel_num_[1], mp_.map_voxel_num_[2]);
+
+  ROS_INFO_THROTTLE(1.0, "Camera pose: (%f, %f, %f)", 
+    md_.camera_pos_(0), md_.camera_pos_(1), md_.camera_pos_(2));
+
+  ROS_INFO_THROTTLE(1.0, "Map boundary: (%2f, %2f, %2f) -> (%2f, %2f, %2f)", 
+    mp_.map_min_boundary_(0), mp_.map_min_boundary_(1), mp_.map_min_boundary_(2),
+    mp_.map_max_boundary_(0), mp_.map_max_boundary_(1), mp_.map_max_boundary_(2));
 
   if (isInMap(md_.camera_pos_))
   {
-    ROS_INFO("depthPoseCallback: IN MAP");
+    ROS_ERROR_THROTTLE(1.0, "camDepthCallback: IN MAP");
     md_.has_odom_ = true;
     md_.update_num_ += 1;
     md_.occ_need_update_ = true;
   }
   else
   {
-    ROS_INFO("depthPoseCallback: NOT IN MAP");
+    ROS_ERROR_THROTTLE(1.0, "camDepthCallback: NOT IN MAP");
     md_.occ_need_update_ = false;
   }
 
@@ -606,13 +668,15 @@ void GridMap::depthOdomCallback(const sensor_msgs::ImageConstPtr &img,
                                                  odom->pose.pose.orientation.y,
                                                  odom->pose.pose.orientation.z);
   Eigen::Matrix3d body_r_m = body_q.toRotationMatrix();
-  Eigen::Matrix4d body2world;
+  Eigen::Matrix4d body2world; // Body of uav to world frame
   body2world.block<3, 3>(0, 0) = body_r_m;
   body2world(0, 3) = odom->pose.pose.position.x;
   body2world(1, 3) = odom->pose.pose.position.y;
   body2world(2, 3) = odom->pose.pose.position.z;
   body2world(3, 3) = 1.0;
 
+  // md_.cam2body_ is formed from extrinsicCallback() to "/vins_estimator/extrinsic"
+  // Converts camera to world frame
   Eigen::Matrix4d cam_T = body2world * md_.cam2body_;
   md_.camera_pos_(0) = cam_T(0, 3);
   md_.camera_pos_(1) = cam_T(1, 3);
@@ -632,44 +696,43 @@ void GridMap::depthOdomCallback(const sensor_msgs::ImageConstPtr &img,
   md_.flag_use_depth_fusion = true;
 }
 
-void GridMap::depthPoseCallback(const sensor_msgs::ImageConstPtr &img,
-                                const geometry_msgs::PoseStampedConstPtr &pose)
-{
-  ROS_INFO("DEPTH POSE CALLBACK!");
-  /* get depth image */
-  cv_bridge::CvImagePtr cv_ptr;
-  cv_ptr = cv_bridge::toCvCopy(img, img->encoding);
+// void GridMap::depthPoseCallback(const sensor_msgs::ImageConstPtr &img,
+//                                 const geometry_msgs::PoseStampedConstPtr &pose)
+// {
 
-  if (img->encoding == sensor_msgs::image_encodings::TYPE_32FC1)
-  {
-    (cv_ptr->image).convertTo(cv_ptr->image, CV_16UC1, mp_.k_depth_scaling_factor_);
-  }
-  cv_ptr->image.copyTo(md_.depth_image_);
+//   /* get depth image */
+//   cv_bridge::CvImagePtr cv_ptr;
+//   cv_ptr = cv_bridge::toCvCopy(img, img->encoding);
+//   if (img->encoding == sensor_msgs::image_encodings::TYPE_32FC1)
+//   {
+//     (cv_ptr->image).convertTo(cv_ptr->image, CV_16UC1, mp_.k_depth_scaling_factor_);
+//   }
+//   cv_ptr->image.copyTo(md_.depth_image_);
 
-  // std::cout << "depth: " << md_.depth_image_.cols << ", " << md_.depth_image_.rows << std::endl;
+//   // std::cout << "depth: " << md_.depth_image_.cols << ", " << md_.depth_image_.rows << std::endl;
 
-  /* get pose */
-  md_.camera_pos_(0) = pose->pose.position.x;
-  md_.camera_pos_(1) = pose->pose.position.y;
-  md_.camera_pos_(2) = pose->pose.position.z;
-  md_.camera_r_m_ = Eigen::Quaterniond(pose->pose.orientation.w, pose->pose.orientation.x,
-                                       pose->pose.orientation.y, pose->pose.orientation.z)
-                        .toRotationMatrix();
-  if (isInMap(md_.camera_pos_))
-  {
-    ROS_INFO("depthPoseCallback: IN MAP");
-    md_.has_odom_ = true;
-    md_.update_num_ += 1;
-    md_.occ_need_update_ = true;
-  }
-  else
-  {
-    ROS_ERROR("depthPoseCallback: NOT IN MAP");
-    md_.occ_need_update_ = false;
-  }
+//   /* get pose */
+//   md_.camera_pos_(0) = pose->pose.position.x;
+//   md_.camera_pos_(1) = pose->pose.position.y;
+//   md_.camera_pos_(2) = pose->pose.position.z;
+//   md_.camera_r_m_ = Eigen::Quaterniond(pose->pose.orientation.w, pose->pose.orientation.x,
+//                                        pose->pose.orientation.y, pose->pose.orientation.z)
+//                         .toRotationMatrix();
+//   if (isInMap(md_.camera_pos_))
+//   {
+//     ROS_INFO("depthPoseCallback: IN MAP");
+//     md_.has_odom_ = true;
+//     md_.update_num_ += 1;
+//     md_.occ_need_update_ = true;
+//   }
+//   else
+//   {
+//     ROS_ERROR("depthPoseCallback: NOT IN MAP");
+//     md_.occ_need_update_ = false;
+//   }
 
-  md_.flag_use_depth_fusion = true;
-}
+//   md_.flag_use_depth_fusion = true;
+// }
 
 /** Helper methods */
 

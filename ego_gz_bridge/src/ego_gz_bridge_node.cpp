@@ -26,7 +26,7 @@ public:
     camera_pos_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/iris_depth_camera/camera/pose", 10);
 
     // Timers
-    pub_camera_pose_timer_ = nh.createTimer(ros::Duration(1/30), &EgoGZBridge::pubCameraPoseTimerCb, this);
+    // pub_camera_pose_timer_ = nh.createTimer(ros::Duration(1/30), &EgoGZBridge::pubCameraPoseTimerCb, this);
 
     // Transformations
     tfListener_.reset(new tf2_ros::TransformListener(tfBuffer_));
@@ -47,6 +47,7 @@ public:
     tf::poseStampedMsgToTF(*msg, map_to_base_link_tf);
 
     br.sendTransform(tf::StampedTransform(map_to_base_link_tf, ros::Time::now(), "world", "base_link"));
+
   }
 
   // Helper method to get transformation between 2 frames

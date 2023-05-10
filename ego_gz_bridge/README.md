@@ -74,9 +74,8 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 12. Fixed transformation between camera_link and base_link
 
 ## Changes TODO
-1. Test out with using just cloud topic
-    - It seems to be insufficient as the gridmap also relies on the depth image and performs ray casting
-2. Need to provide either camera pose or odom. Might require another node to subscribe to the transform and publish the pose 
+
+1. Test modifying "md_.cam2body_" to achieve the right transformation of the camera to the body frame
 2. Look at transform issue between base_link and map, how to broadcast that transform properly? Maybe look at XTDrone simulation?
     - Use GPS ground truth?
 3. Replanning does not take into account the current position of the drone? Why is that so?
