@@ -664,7 +664,7 @@ void GridMap::depthPoseCallback(const sensor_msgs::ImageConstPtr &img,
   }
   else
   {
-    ROS_INFO("depthPoseCallback: NOT IN MAP");
+    ROS_ERROR("depthPoseCallback: NOT IN MAP");
     md_.occ_need_update_ = false;
   }
 

@@ -421,6 +421,7 @@ inline int GridMap::getOccupancy(Eigen::Vector3i id)
   return md_.occupancy_buffer_[toAddress(id)] > mp_.min_occupancy_log_ ? 1 : 0;
 }
 
+// Checks if the position of the camera is currently within the map boundaries
 inline bool GridMap::isInMap(const Eigen::Vector3d &pos)
 {
   if (pos(0) < mp_.map_min_boundary_(0) + 1e-4 || pos(1) < mp_.map_min_boundary_(1) + 1e-4 ||

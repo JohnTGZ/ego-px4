@@ -69,25 +69,40 @@ public:
   // Timer callback to publish camera pose 
   void pubCameraPoseTimerCb(const ros::TimerEvent &e){
 
-    if (!base_link_to_cam_tf_init_){
-      geometry_msgs::TransformStamped tf_between_frames_msg;
-      if (!getTransform("world", "camera_link", tf_between_frames_msg)){
-        return;
-      }
-      camera_pos_msg_.header.frame_id = "world";
-      camera_pos_msg_.header.stamp = ros::Time::now(); 
-
-      camera_pos_msg_.pose.position.x = tf_between_frames_msg.transform.translation.x;
-      camera_pos_msg_.pose.position.y = tf_between_frames_msg.transform.translation.y;
-      camera_pos_msg_.pose.position.z = tf_between_frames_msg.transform.translation.z;
-
-      camera_pos_msg_.pose.orientation = tf_between_frames_msg.transform.rotation;
-
-      base_link_to_cam_tf_init_ = true;
+    geometry_msgs::TransformStamped tf_between_frames_msg;
+    if (!getTransform("world", "camera_link", tf_between_frames_msg)){
+      return;
     }
-    else {
-      camera_pos_pub_.publish(camera_pos_msg_);
-    }
+    camera_pos_msg_.header.frame_id = "world";
+    camera_pos_msg_.header.stamp = ros::Time::now(); 
+
+    camera_pos_msg_.pose.position.x = tf_between_frames_msg.transform.translation.x;
+    camera_pos_msg_.pose.position.y = tf_between_frames_msg.transform.translation.y;
+    camera_pos_msg_.pose.position.z = tf_between_frames_msg.transform.translation.z;
+
+    camera_pos_msg_.pose.orientation = tf_between_frames_msg.transform.rotation;
+
+    camera_pos_pub_.publish(camera_pos_msg_);
+
+    // if (!base_link_to_cam_tf_init_){
+    //   geometry_msgs::TransformStamped tf_between_frames_msg;
+    //   if (!getTransform("world", "camera_link", tf_between_frames_msg)){
+    //     return;
+    //   }
+    //   camera_pos_msg_.header.frame_id = "world";
+    //   camera_pos_msg_.header.stamp = ros::Time::now(); 
+
+    //   camera_pos_msg_.pose.position.x = tf_between_frames_msg.transform.translation.x;
+    //   camera_pos_msg_.pose.position.y = tf_between_frames_msg.transform.translation.y;
+    //   camera_pos_msg_.pose.position.z = tf_between_frames_msg.transform.translation.z;
+
+    //   camera_pos_msg_.pose.orientation = tf_between_frames_msg.transform.rotation;
+
+    //   base_link_to_cam_tf_init_ = true;
+    // }
+    // else {
+    //   camera_pos_pub_.publish(camera_pos_msg_);
+    // }
 
   }
 
