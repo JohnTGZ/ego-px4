@@ -71,11 +71,19 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 9. Moved `poscmd_2_odom` and `odom_visualization` nodes from simulator.xml up one level to advanced_param.xml
 10. Create another node just to transform point clouds to add publishing of point clouds from depth camera transformed from `camera_link` to `map` frame
 11. Added a "complete" state machine to trajectory server with safety features such as Emergency stop and the ability to switch between HOVER and MISSION mode.
-12. Fixed transformation between camera_link and base_link
+12. The occupancy map not aligned with the actual depth camera point cloud: Need to set the intrinsic parameters (This can be obtained by the 'K' variable in the `camera_info` topic )
 
 ## Changes TODO
+0. Continue working on modifying xacro file to work on gazebo. Look at RotorS repo as an example.
 
-1. Test modifying "md_.cam2body_" to achieve the right transformation of the camera to the body frame
+1. Investigate being able to publish transforms via gazebo plugins
+    - Method A: publish joint state topics in gazebo and have the robot_state_publisher subscribe to it and the robot description, which then publishes the TF
+
+2. For camera pose relative to base_link, consider adding an extrinsic parameters ROS param to gridmap, like what is done for intrinsic parameters?
+
+3. Investigate fault with gridmap
+    - Look at raycastProcess
+
 2. Look at transform issue between base_link and map, how to broadcast that transform properly? Maybe look at XTDrone simulation?
     - Use GPS ground truth?
 3. Replanning does not take into account the current position of the drone? Why is that so?
@@ -86,10 +94,8 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 2. Drone deviates significantly from trajectory path (Perhaps because we are sending PVA commands directly to the PX4 controller, and the controller model used in the egoswarm repo might not fit the actual dynamics of the drone)
 3. Drone's heading does not always face it's direction of travel (results in depth camera not facing the direction of travel)
 
-4. Disabling of offboard mode for land state would be a good feature. Current challenge to implement it is to make sure that the drone has actually landed (Otherwise it will be stuck in AUTO.LOITER while hovering in the air, being unable to disarm).
-
+4. Disabling of offboard mode for land state would be a good feature. Current challenge to implement it is to be able to reliably check that the drone has actually landed (Otherwise it will be stuck in AUTO.LOITER while hovering in the air, being unable to disarm).
 
 ## Future TODO
-1. Need to set up proper TF Transformation
-2. Create xacro file for quadcopter model with camera
-3. Downsampling of point cloud
+1. Downsampling of point cloud
+2. Port to ROS2

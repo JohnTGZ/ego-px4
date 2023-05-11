@@ -4,20 +4,14 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /Global Options1
-        - /Status1
-        - /simulation_map1/Autocompute Value Bounds1
         - /drone01
         - /drone01/Planning1/drone_path1/Offset1
-        - /drone01/Simulation1
-        - /drone01/Simulation1/robot1
+        - /drone01/Mapping1
+        - /drone01/Mapping1/occupancy1
         - /drone11/Planning1
         - /drone11/Mapping1/map inflate1
         - /drone21/Mapping1/map inflate1
-        - /mavros1
-        - /global_position/local1
-        - /local_position/odom1
-      Splitter Ratio: 0.4611259996891022
+      Splitter Ratio: 0.5710455775260925
     Tree Height: 416
   - Class: rviz/Selection
     Name: Selection
@@ -37,7 +31,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: PointCloud2
+    SyncSource: depth point cloud
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -47,13 +41,31 @@ Visualization Manager:
   Displays:
     - Alpha: 1
       Class: rviz/Axes
+      Enabled: true
+      Length: 0.5
+      Name: world frame
+      Radius: 0.02500000037252903
+      Reference Frame: world
+      Show Trail: false
+      Value: true
+    - Alpha: 1
+      Class: rviz/Axes
       Enabled: false
-      Length: 1
-      Name: Axes
-      Radius: 0.10000000149011612
-      Reference Frame: <Fixed Frame>
+      Length: 0.5
+      Name: base_link
+      Radius: 0.02500000037252903
+      Reference Frame: base_link
       Show Trail: false
       Value: false
+    - Alpha: 1
+      Class: rviz/Axes
+      Enabled: true
+      Length: 0.5
+      Name: camera_link
+      Radius: 0.02500000037252903
+      Reference Frame: camera_link
+      Show Trail: false
+      Value: true
     - Alpha: 0.5
       Cell Size: 1
       Class: rviz/Grid
@@ -72,43 +84,6 @@ Visualization Manager:
       Plane Cell Count: 1000
       Reference Frame: <Fixed Frame>
       Value: true
-    - Alpha: 1
-      Autocompute Intensity Bounds: true
-      Autocompute Value Bounds:
-        Max Value: 2.9000000953674316
-        Min Value: 0
-        Value: false
-      Axis: Z
-      Channel Name: intensity
-      Class: rviz/PointCloud2
-      Color: 178; 178; 206
-      Color Transformer: FlatColor
-      Decay Time: 0
-      Enabled: false
-      Invert Rainbow: false
-      Max Color: 255; 255; 255
-      Min Color: 0; 0; 0
-      Name: simulation_map
-      Position Transformer: XYZ
-      Queue Size: 10
-      Selectable: true
-      Size (Pixels): 3
-      Size (m): 0.10000000149011612
-      Style: Boxes
-      Topic: /map_generator/global_cloud
-      Unreliable: false
-      Use Fixed Frame: true
-      Use rainbow: true
-      Value: false
-    - Alpha: 1
-      Class: rviz/Axes
-      Enabled: false
-      Length: 1
-      Name: Axes
-      Radius: 0.10000000149011612
-      Reference Frame: my_view
-      Show Trail: false
-      Value: false
     - Class: rviz/Group
       Displays:
         - Class: rviz/Group
@@ -118,7 +93,7 @@ Visualization Manager:
               Marker Topic: /drone_0_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -126,7 +101,7 @@ Visualization Manager:
               Marker Topic: /drone_0_ego_planner_node/global_list
               Name: global_path
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -134,7 +109,7 @@ Visualization Manager:
               Marker Topic: /drone_0_ego_planner_node/optimal_list
               Name: optimal_traj
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -158,7 +133,7 @@ Visualization Manager:
               Marker Topic: /drone_0_ego_planner_node/init_list
               Name: InitTraj
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Alpha: 1
@@ -189,7 +164,7 @@ Visualization Manager:
           Name: Planning
         - Class: rviz/Group
           Displays:
-            - Alpha: 0.699999988079071
+            - Alpha: 1
               Autocompute Intensity Bounds: true
               Autocompute Value Bounds:
                 Max Value: 10
@@ -198,7 +173,7 @@ Visualization Manager:
               Axis: Z
               Channel Name: intensity
               Class: rviz/PointCloud2
-              Color: 52; 101; 164
+              Color: 204; 0; 0
               Color Transformer: FlatColor
               Decay Time: 0
               Enabled: true
@@ -217,7 +192,7 @@ Visualization Manager:
               Use Fixed Frame: true
               Use rainbow: true
               Value: true
-            - Alpha: 0.699999988079071
+            - Alpha: 0.5
               Autocompute Intensity Bounds: true
               Autocompute Value Bounds:
                 Max Value: 10
@@ -571,7 +546,7 @@ Visualization Manager:
           Invert Rainbow: false
           Max Color: 255; 255; 255
           Min Color: 0; 0; 0
-          Name: PointCloud2
+          Name: depth point cloud
           Position Transformer: XYZ
           Queue Size: 10
           Selectable: true
@@ -583,6 +558,41 @@ Visualization Manager:
           Use Fixed Frame: true
           Use rainbow: true
           Value: true
+        - Angle Tolerance: 0.10000000149011612
+          Class: rviz/Odometry
+          Covariance:
+            Orientation:
+              Alpha: 0.5
+              Color: 255; 255; 127
+              Color Style: Unique
+              Frame: Local
+              Offset: 1
+              Scale: 1
+              Value: true
+            Position:
+              Alpha: 0.30000001192092896
+              Color: 204; 51; 204
+              Scale: 1
+              Value: true
+            Value: true
+          Enabled: false
+          Keep: 100
+          Name: local_position/odom
+          Position Tolerance: 0.10000000149011612
+          Queue Size: 10
+          Shape:
+            Alpha: 1
+            Axes Length: 1
+            Axes Radius: 0.10000000149011612
+            Color: 255; 25; 0
+            Head Length: 0.30000001192092896
+            Head Radius: 0.10000000149011612
+            Shaft Length: 1
+            Shaft Radius: 0.05000000074505806
+            Value: Arrow
+          Topic: /mavros/local_position/odom
+          Unreliable: false
+          Value: false
         - Alpha: 1
           Axes Length: 1
           Axes Radius: 0.10000000149011612
@@ -634,6 +644,41 @@ Visualization Manager:
           Topic: /mavros/local_position/odom
           Unreliable: false
           Value: false
+        - Angle Tolerance: 0.10000000149011612
+          Class: rviz/Odometry
+          Covariance:
+            Orientation:
+              Alpha: 0.5
+              Color: 255; 255; 127
+              Color Style: Unique
+              Frame: Local
+              Offset: 1
+              Scale: 1
+              Value: true
+            Position:
+              Alpha: 0.30000001192092896
+              Color: 204; 51; 204
+              Scale: 1
+              Value: true
+            Value: false
+          Enabled: false
+          Keep: 100
+          Name: global_position/local
+          Position Tolerance: 0.10000000149011612
+          Queue Size: 10
+          Shape:
+            Alpha: 1
+            Axes Length: 1
+            Axes Radius: 0.10000000149011612
+            Color: 255; 25; 0
+            Head Length: 0.30000001192092896
+            Head Radius: 0.10000000149011612
+            Shaft Length: 1
+            Shaft Radius: 0.05000000074505806
+            Value: Arrow
+          Topic: /mavros/global_position/local
+          Unreliable: false
+          Value: false
         - Class: rviz/Image
           Enabled: false
           Image Topic: /iris_depth_camera/camera/depth/image_raw
@@ -648,74 +693,20 @@ Visualization Manager:
           Value: false
       Enabled: true
       Name: mavros
-    - Angle Tolerance: 0.10000000149011612
-      Class: rviz/Odometry
-      Covariance:
-        Orientation:
-          Alpha: 0.5
-          Color: 255; 255; 127
-          Color Style: Unique
-          Frame: Local
-          Offset: 1
-          Scale: 1
-          Value: true
-        Position:
-          Alpha: 0.30000001192092896
-          Color: 204; 51; 204
-          Scale: 1
-          Value: true
-        Value: false
+    - Alpha: 1
+      Axes Length: 1
+      Axes Radius: 0.10000000149011612
+      Class: rviz/Pose
+      Color: 255; 25; 0
       Enabled: true
-      Keep: 100
-      Name: global_position/local
-      Position Tolerance: 0.10000000149011612
+      Head Length: 0.20000000298023224
+      Head Radius: 0.05000000074505806
+      Name: camera pose
       Queue Size: 10
-      Shape:
-        Alpha: 1
-        Axes Length: 1
-        Axes Radius: 0.10000000149011612
-        Color: 255; 25; 0
-        Head Length: 0.30000001192092896
-        Head Radius: 0.10000000149011612
-        Shaft Length: 1
-        Shaft Radius: 0.05000000074505806
-        Value: Arrow
-      Topic: /mavros/global_position/local
-      Unreliable: false
-      Value: true
-    - Angle Tolerance: 0.10000000149011612
-      Class: rviz/Odometry
-      Covariance:
-        Orientation:
-          Alpha: 0.5
-          Color: 255; 255; 127
-          Color Style: Unique
-          Frame: Local
-          Offset: 1
-          Scale: 1
-          Value: true
-        Position:
-          Alpha: 0.30000001192092896
-          Color: 204; 51; 204
-          Scale: 1
-          Value: true
-        Value: true
-      Enabled: true
-      Keep: 100
-      Name: local_position/odom
-      Position Tolerance: 0.10000000149011612
-      Queue Size: 10
-      Shape:
-        Alpha: 1
-        Axes Length: 1
-        Axes Radius: 0.10000000149011612
-        Color: 255; 25; 0
-        Head Length: 0.30000001192092896
-        Head Radius: 0.10000000149011612
-        Shaft Length: 1
-        Shaft Radius: 0.05000000074505806
-        Value: Arrow
-      Topic: /mavros/local_position/odom
+      Shaft Length: 0.5
+      Shaft Radius: 0.02500000037252903
+      Shape: Arrow
+      Topic: /iris_depth_camera/camera/pose
       Unreliable: false
       Value: true
   Enabled: true
@@ -747,7 +738,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 7.429385662078857
+      Distance: 16.73993492126465
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -755,17 +746,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 11.107630729675293
-        Y: -6.537903308868408
-        Z: 2.2030753825674765e-06
+        X: 1.566577672958374
+        Y: -0.2668467164039612
+        Z: 1.8219329831481446e-06
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5697963237762451
+      Pitch: 0.4697965085506439
       Target Frame: my_view
-      Yaw: 2.542715072631836
+      Yaw: 2.5077266693115234
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

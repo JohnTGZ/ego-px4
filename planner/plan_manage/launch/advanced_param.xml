@@ -53,9 +53,10 @@
         
         <!-- We only use either the camera_pose_topic and depth_topic OR 
         the cloud_topic -->
+
+        <!-- The chunk below is currently not being used -->
         <remap from="~grid_map/pose"  to = "$(arg camera_pose_topic)"/>
         <remap from="~grid_map/depth" to = "$(arg depth_topic)"/>
-
         <remap from="~grid_map/cloud" to="$(arg cloud_topic)"/>
         
         <remap from="~grid_map/global_cam_pose"  to = "$(arg camera_pose_topic)"/>
@@ -116,7 +117,7 @@
         <param name="grid_map/use_depth_filter" value="true"/>
         <param name="grid_map/depth_filter_tolerance" value="0.15"/>
         <param name="grid_map/depth_filter_maxdist" value="5.0"/>
-        <param name="grid_map/depth_filter_mindist" value="0.2"/>
+        <param name="grid_map/depth_filter_mindist" value="0.1"/>
         <param name="grid_map/depth_filter_margin" value="2"/>
         <param name="grid_map/k_depth_scaling_factor" value="1000.0"/>
         <param name="grid_map/skip_pixel" value="2"/>
@@ -132,6 +133,7 @@
         <param name="grid_map/show_occ_time" value="false"/>
         <!-- Toggle between 1 ("grid_map/pose") or 2 ("grid_map/odom") to use different topics -->
         <param name="grid_map/pose_type" value="1"/>
+        <!-- Frame ID to use for publishing (NOT for the input sensor data) -->
         <param name="grid_map/frame_id" value="world"/>
         <!-- planner manager -->
         <param name="manager/max_vel" value="$(arg max_vel)" type="double"/>

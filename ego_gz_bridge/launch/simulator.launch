@@ -3,33 +3,41 @@
   <arg name="y_pos" default="0.0"/>
   <arg name="z_pos" default="0.0"/>
   <arg name="world_name" default="$(find ego_gz_bridge)/simulation/worlds/ego_test.world"/>
-  <arg name="model" default="iris_demo"/>
+  <arg name="model" default="iris_pro"/>
+  <!-- <arg name="model" default="iris_demo"/> -->
 
-  <node pkg="ego_gz_bridge" name="ego_gz_bridge_node" type="ego_gz_bridge_node" output="screen"/>
-  <!-- <node pkg="ego_gz_bridge" name="cloud_repub_node" type="cloud_repub_node" output="screen"/> -->
+  <!-- <node pkg="ego_gz_bridge" name="ego_gz_bridge_node" type="ego_gz_bridge_node" output="screen"/> -->
     
-  <node pkg="tf" type="static_transform_publisher" 
-    name="base_link_to_camera_link_tf" args="0 0 -0.05 1.5707963 3.1415927 1.5707963 /base_link /camera_link 100" />
+  <!-- <node pkg="tf" type="static_transform_publisher" 
+    name="base_link_to_camera_link_tf" 
+    args="0.0 0 0.0 1.5707963 3.1415927 1.5707963 /base_link /camera_link 100" /> -->
 
   <!-- Add static transform from world to map -->
-  <node pkg="tf" type="static_transform_publisher" name="world_to_map_tf" args="0 0 0 0 0 0 1 world map 50" />
-
-  <!-- Add static transform from world to map -->
-  <!-- <node pkg="tf" type="static_transform_publisher" name="world_to_odom_tf" args="0 0 0 0 0 0 1 world odom 50" /> -->
+  <!-- <node pkg="tf" type="static_transform_publisher"  -->
+    <!-- name="world_to_map_tf"  -->
+    <!-- args="0 0 0 0 0 0 1 world map 100" /> -->
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
     <arg name="world_name" value="$(arg world_name)"/>
     <arg name="paused" value="false"/>
     <arg name="use_sim_time" value="true"/>
-    <arg name="gui" value="false"/>
-    <arg name="headless" value="true"/>
+    <arg name="gui" value="true"/>
+    <arg name="headless" value="false"/>
     <arg name="debug" value="false"/>
   </include>
 
-  <param name="robot_description" 
+  <!-- <param name="robot_description" 
     command="$(find xacro)/xacro $(find ego_gz_bridge)/simulation/models/$(arg model)/$(arg model).sdf" />
 
   <node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf"  
-    args="-sdf -model iris_depth_camera -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos) -param robot_description" />
+    args="-sdf -model $(arg model) -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos) -param robot_description" /> -->
+
+  <param name="robot_description" 
+    command="$(find xacro)/xacro --inorder $(find ego_gz_bridge)/simulation/models/$(arg model)/$(arg model).urdf.xacro" />
+
+  <node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf"  
+    args="-urdf -model $(arg model) -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos) -param robot_description" />
+
+  <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find ego_planner)/launch/default.rviz" required="true" /> -->
 
 </launch>
