@@ -3,8 +3,12 @@
   <arg name="y_pos" default="0.0"/>
   <arg name="z_pos" default="0.0"/>
   <arg name="world_name" default="$(find ego_gz_bridge)/simulation/worlds/ego_test.world"/>
-  <arg name="model" default="iris_pro"/>
+  <arg name="model" default="hummingbird"/>
+  <!-- <arg name="model" default="iris_pro"/> -->
   <!-- <arg name="model" default="iris_demo"/> -->
+
+  <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find ego_gz_bridge)/simulation/models"/>
+  <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find ego_gz_bridge)/simulation/models"/>
 
   <!-- <node pkg="ego_gz_bridge" name="ego_gz_bridge_node" type="ego_gz_bridge_node" output="screen"/> -->
     
@@ -32,12 +36,44 @@
   <node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf"  
     args="-sdf -model $(arg model) -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos) -param robot_description" /> -->
 
-  <param name="robot_description" 
-    command="$(find xacro)/xacro --inorder $(find ego_gz_bridge)/simulation/models/$(arg model)/$(arg model).urdf.xacro" />
+  <!-- <param name="robot_description" 
+    command="$(find xacro)/xacro $(find ego_gz_bridge)/simulation/models/$(arg model)/$(arg model).urdf.xacro" />
 
   <node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf"  
-    args="-urdf -model $(arg model) -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos) -param robot_description" />
+    args="-urdf -model $(arg model) -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos) -param robot_description" /> -->
 
-  <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find ego_planner)/launch/default.rviz" required="true" /> -->
+  <arg name="namespace" default="$(arg model)"/>
+  <arg name="mav_name" default="$(arg model)"/>
+  <arg name="enable_logging" default="false"/>
+  <arg name="enable_ground_truth" default="true"/>
+  <arg name="log_file" default="$(arg model)"/>
+  <arg name="wait_to_record_bag" default="false"/>
+  <arg name="enable_mavlink_interface" default="false"/>
+
+  <param name="robot_description" command="
+    $(find xacro)/xacro $(find ego_gz_bridge)/simulation/models/$(arg model)_base.xacro
+    enable_logging:=$(arg enable_logging)
+    enable_ground_truth:=$(arg enable_ground_truth)
+    enable_mavlink_interface:=$(arg enable_mavlink_interface)
+    log_file:=$(arg log_file)
+    wait_to_record_bag:=$(arg wait_to_record_bag)
+    mav_name:=$(arg mav_name)
+    namespace:=$(arg namespace)"
+  />
+
+  <node name="spawn_$(arg model)" pkg="gazebo_ros" type="spawn_model"
+   args="-param robot_description
+         -urdf
+         -x $(arg x_pos) 
+         -y $(arg y_pos) 
+         -z $(arg z_pos)
+         -model $(arg model)"
+   respawn="false" output="screen">
+  </node>
+
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+  <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find ego_planner)/launch/default.rviz" required="true" />
 
 </launch>

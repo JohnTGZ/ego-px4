@@ -18,11 +18,13 @@ This package contains the bridge to link Egoswarm V2 algorithms, the gazebo simu
 ```bash 
 export ROS_DISTRO="noetic"
 
-sudo apt install tmux -y
-sudo apt install python3-vcstool -y
+sudo apt install tmux python3-vcstool -y
+# Install ROS dependencies
 sudo apt install ros-noetic-tf2-sensor-msgs -y
-sudo apt-get install protobuf-compiler libeigen3-dev libopencv-dev -y
-sudo apt-get install ros-${ROS_DISTRO}-mavros ros-${ROS_DISTRO}-mavros-extras ros-${ROS_DISTRO}-mavros-msgs -y
+sudo apt-get install ros-${ROS_DISTRO}-mavlink ros-${ROS_DISTRO}-mavros ros-${ROS_DISTRO}-mavros-extras ros-${ROS_DISTRO}-mavros-msgs -y
+sudo apt-get install ros-${ROS_DISTRO}-joy ros-${ROS_DISTRO}-octomap-ros ros-${ROS_DISTRO}-control-toolbox -y
+# Install external dependencies
+sudo apt-get install protobuf-compiler libeigen3-dev libopencv-dev libgoogle-glog-dev -y
 wget https://raw.githubusercontent.com/mavlink/mavros/master/mavros/scripts/install_geographiclib_datasets.sh
 sudo bash ./install_geographiclib_datasets.sh
 ```
@@ -72,12 +74,12 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 10. Create another node just to transform point clouds to add publishing of point clouds from depth camera transformed from `camera_link` to `map` frame
 11. Added a "complete" state machine to trajectory server with safety features such as Emergency stop and the ability to switch between HOVER and MISSION mode.
 12. The occupancy map not aligned with the actual depth camera point cloud: Need to set the intrinsic parameters (This can be obtained by the 'K' variable in the `camera_info` topic )
+13. Investigate being able to publish transforms via gazebo plugins
+    - Method A: publish joint state topics in gazebo and have the robot_state_publisher subscribe to it and the robot description, which then publishes the TF
 
 ## Changes TODO
-0. Continue working on modifying xacro file to work on gazebo. Look at RotorS repo as an example.
-
-1. Investigate being able to publish transforms via gazebo plugins
-    - Method A: publish joint state topics in gazebo and have the robot_state_publisher subscribe to it and the robot description, which then publishes the TF
+1. Continue working on modifying xacro file to work on gazebo. Look at RotorS repo as an example.
+    - Get mavlink interface to work
 
 2. For camera pose relative to base_link, consider adding an extrinsic parameters ROS param to gridmap, like what is done for intrinsic parameters?
 

@@ -7,8 +7,12 @@ SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 PX4_AUTOPILOT_REPO_DIR="$SCRIPT_DIR/../../../../PX4-Autopilot"
 
+# SOURCE_PX4_AUTOPILOT="
+# source $PX4_AUTOPILOT_REPO_DIR/Tools/simulation/gazebo-classic/setup_gazebo.bash $PX4_AUTOPILOT_REPO_DIR $PX4_AUTOPILOT_REPO_DIR/build/px4_sitl_default &&
+# source $SCRIPT_DIR/../../../../devel/setup.bash &&
+# "
+
 SOURCE_PX4_AUTOPILOT="
-source $PX4_AUTOPILOT_REPO_DIR/Tools/simulation/gazebo-classic/setup_gazebo.bash $PX4_AUTOPILOT_REPO_DIR $PX4_AUTOPILOT_REPO_DIR/build/px4_sitl_default &&
 source $SCRIPT_DIR/../../../../devel/setup.bash &&
 "
 
@@ -37,7 +41,7 @@ then
     sleep 3
     tmux send-keys -t $SESSION:0.1 "$ADD_ROS_PACKAGE_PATH $CMD_1" C-m 
     sleep 1
-    tmux send-keys -t $SESSION:0.2 "$ADD_ROS_PACKAGE_PATH $CMD_2" C-m 
+    tmux send-keys -t $SESSION:0.2 "$CMD_2" C-m 
 fi
 
 # Attach session on the first window
