@@ -3,3 +3,8 @@ repositories:
     type: git
     url: https://github.com/PX4/PX4-Autopilot.git
     version: main
+
+  ../../mav_comm:
+    type: git
+    url: https://github.com/ethz-asl/mav_comm.git
+    version: master

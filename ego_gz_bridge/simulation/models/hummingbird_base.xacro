@@ -20,6 +20,14 @@
 -->
 
 <robot name="hummingbird" xmlns:xacro="http://ros.org/wiki/xacro">
+  <!-- Properties that can be assigned at build time as arguments.
+  Is there a reason not to make all properties arguments?
+  -->
+  <xacro:arg name='mavlink_addr' default='INADDR_ANY' />
+  <xacro:arg name='mavlink_udp_port' default='14560' />
+  <xacro:arg name='visual_material' default='DarkGrey' />
+  <xacro:arg name='serial_enabled' default='false' />
+
   <xacro:include filename="$(find ego_gz_bridge)/simulation/models/component_snippets.xacro" />
   <!-- Instantiate hummingbird "mechanics" -->
   <xacro:include filename="$(find ego_gz_bridge)/simulation/models/hummingbird.xacro" />
@@ -29,7 +37,8 @@
 
   <xacro:if value="$(arg enable_mavlink_interface)">
     <!-- Instantiate mavlink telemetry interface. -->
-    <xacro:default_mavlink_interface namespace="${namespace}" imu_sub_topic="imu" rotor_count="4" />
+    <xacro:default_mavlink_interface 
+      namespace="${namespace}" imu_sub_topic="imu" rotor_count="4" />
   </xacro:if>
 
   <!-- Mount an ADIS16448 IMU. -->
@@ -56,6 +65,7 @@
     enable_ground_truth="false">
     <origin xyz="0.05 0.0 0.04" rpy="0.0 0.1 0.0" />
   </xacro:vi_sensor_macro>
+
 
 </robot>
 

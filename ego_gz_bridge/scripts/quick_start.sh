@@ -12,11 +12,13 @@ PX4_AUTOPILOT_REPO_DIR="$SCRIPT_DIR/../../../../PX4-Autopilot"
 # source $SCRIPT_DIR/../../../../devel/setup.bash &&
 # "
 
+
+# Use this if not using gazebo plugins from PX4-Autopilot repo 
 SOURCE_PX4_AUTOPILOT="
 source $SCRIPT_DIR/../../../../devel/setup.bash &&
 "
 
-ADD_ROS_PACKAGE_PATH="
+ADD_PX4_PACKAGE_PATH="
 export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$PX4_AUTOPILOT_REPO_DIR:$PX4_AUTOPILOT_REPO_DIR/Tools/simulation/gazebo-classic/sitl_gazebo-classic &&
 "
 
@@ -24,9 +26,17 @@ CMD_0="
 roslaunch ego_gz_bridge simulator.launch world_name:=$SCRIPT_DIR/../simulation/worlds/ego_test.world
 "
 CMD_1="
-roslaunch px4 px4.launch
+roslaunch px4 px4.launch fcu_url:="udp://:14540@0.0.0.0:14550"
 "
-CMD_2="roslaunch mavros px4.launch fcu_url:="udp://:14540@127.0.0.1:14557""
+CMD_2="roslaunch mavros px4.launch fcu_url:="udp://:14540@0.0.0.0:14550""
+
+# UDP ports (PX4 <-> Mavlink communication)
+# 14550: Communication with ground control stations
+# 14540: Communication with offboard APIs (for multi vehicle simulations, PX4 sequentially allocates a seperate remote port from 14540 to 14549)
+
+# UDP ports (PX4 <-> Simulator)
+# 4560: Simulator listens to this port and PX4 initiates a TCP connection to it
+
 
 if [ "$SESSIONEXISTS" = "" ]
 then 
@@ -39,7 +49,7 @@ then
 
     tmux send-keys -t $SESSION:0.0 "$SOURCE_PX4_AUTOPILOT $CMD_0" C-m 
     sleep 3
-    tmux send-keys -t $SESSION:0.1 "$ADD_ROS_PACKAGE_PATH $CMD_1" C-m 
+    tmux send-keys -t $SESSION:0.1 "$ADD_PX4_PACKAGE_PATH $CMD_1" C-m 
     sleep 1
     tmux send-keys -t $SESSION:0.2 "$CMD_2" C-m 
 fi

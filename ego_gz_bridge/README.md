@@ -76,10 +76,12 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 12. The occupancy map not aligned with the actual depth camera point cloud: Need to set the intrinsic parameters (This can be obtained by the 'K' variable in the `camera_info` topic )
 13. Investigate being able to publish transforms via gazebo plugins
     - Method A: publish joint state topics in gazebo and have the robot_state_publisher subscribe to it and the robot description, which then publishes the TF
+1. Continue working on modifying xacro file to work on gazebo.
+    - Tried to interface RotorS plugins with mavros, didn't work. Somehow I couldn't configure mavlink_simulator to accept udp connection
 
 ## Changes TODO
-1. Continue working on modifying xacro file to work on gazebo. Look at RotorS repo as an example.
-    - Get mavlink interface to work
+1. Try out XTDrones with an older version of the PX4 repo 
+    - If this does not prove to be very useful, it is best to just stick with SDFs
 
 2. For camera pose relative to base_link, consider adding an extrinsic parameters ROS param to gridmap, like what is done for intrinsic parameters?
 
@@ -91,6 +93,8 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 3. Replanning does not take into account the current position of the drone? Why is that so?
 6. Extend to multiple drones
 
+7. Investigate changing the custom GridMap implementation to alternatives such as Octomap but still consider the potential performance issues with an established library.
+
 ## Issues
 1. Start of planned trajectory is not based on the drone's actual position but rather the drone's predicted position.
 2. Drone deviates significantly from trajectory path (Perhaps because we are sending PVA commands directly to the PX4 controller, and the controller model used in the egoswarm repo might not fit the actual dynamics of the drone)
@@ -99,5 +103,6 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 4. Disabling of offboard mode for land state would be a good feature. Current challenge to implement it is to be able to reliably check that the drone has actually landed (Otherwise it will be stuck in AUTO.LOITER while hovering in the air, being unable to disarm).
 
 ## Future TODO
+0. Adapt simulation to size of acutal drone to be used
 1. Downsampling of point cloud
 2. Port to ROS2
