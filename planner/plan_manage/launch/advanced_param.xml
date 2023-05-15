@@ -48,19 +48,24 @@
         <!-- //////////////////// -->
         <!-- GridMap params -->
         <!-- //////////////////// -->
-        <!-- "grid_map/odom" topic is used as the odometry of the camera -->
+        <!-- grid_map/pose_type: Toggle between subscription to
+            1 ("grid_map/pose") or 
+            2 ("grid_map/odom") 
+            for use as camera pose/odom-->
+        <param name="~grid_map/pose_type" value="1"/>
         <remap from="~grid_map/odom" to="$(arg odometry_topic)"/>
-        
-        <!-- We only use either the camera_pose_topic and depth_topic OR 
-        the cloud_topic -->
+        <remap from="~grid_map/pose" to = "$(arg camera_pose_topic)"/>
 
-        <!-- The chunk below is currently not being used -->
-        <remap from="~grid_map/pose"  to = "$(arg camera_pose_topic)"/>
-        <remap from="~grid_map/depth" to = "$(arg depth_topic)"/>
+        <!-- grid_map/pose_type: Toggle between subscription to
+            1 ("grid_map/cloud") or 
+            2 ("grid_map/depth") 
+            for use as camera sensor input -->
+        <param name="~grid_map/sensor_type" value="1"/>
         <remap from="~grid_map/cloud" to="$(arg cloud_topic)"/>
-        
-        <remap from="~grid_map/global_cam_pose"  to = "$(arg camera_pose_topic)"/>
-        <remap from="~grid_map/camera_depth"  to = "$(arg depth_topic)"/>
+        <remap from="~grid_map/depth" to = "$(arg depth_topic)"/>
+
+        <!-- Frame ID to use for publishing (NOT for the input sensor data) -->
+        <param name="grid_map/frame_id" value="world"/>
 
         <!-- //////////////////// -->
         <!-- EGOReplanFSM params -->
@@ -131,10 +136,7 @@
         <param name="grid_map/max_ray_length" value="4.5"/>
         <param name="grid_map/visualization_truncate_height" value="4.0"/>
         <param name="grid_map/show_occ_time" value="false"/>
-        <!-- Toggle between 1 ("grid_map/pose") or 2 ("grid_map/odom") to use different topics -->
-        <param name="grid_map/pose_type" value="1"/>
-        <!-- Frame ID to use for publishing (NOT for the input sensor data) -->
-        <param name="grid_map/frame_id" value="world"/>
+
         <!-- planner manager -->
         <param name="manager/max_vel" value="$(arg max_vel)" type="double"/>
         <param name="manager/max_acc" value="$(arg max_acc)" type="double"/>

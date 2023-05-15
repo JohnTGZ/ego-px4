@@ -48,6 +48,14 @@ make distclean
 
 # Quick start
 ```bash
+cd ~/raynor_ws/src/ego-px4/ego_gz_bridge/scripts
+./test_simple_sim.sh
+# In another terminal
+roslaunch px4sim1 sample.launch
+```
+
+
+```bash
 # Taking off
 rostopic pub /traj_server_event std_msgs/Int8 "data: 0" --once
 # Taking Mission
@@ -75,25 +83,22 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 11. Added a "complete" state machine to trajectory server with safety features such as Emergency stop and the ability to switch between HOVER and MISSION mode.
 12. The occupancy map not aligned with the actual depth camera point cloud: Need to set the intrinsic parameters (This can be obtained by the 'K' variable in the `camera_info` topic )
 13. Investigate being able to publish transforms via gazebo plugins
-    - Method A: publish joint state topics in gazebo and have the robot_state_publisher subscribe to it and the robot description, which then publishes the TF
-1. Continue working on modifying xacro file to work on gazebo.
+    - Method A: publish joint state topics in gazebo and have the robot_state_publisher subscribe to it and the robot description, which then publishes the TF 
+14. Continue working on modifying xacro file to work on gazebo.
     - Tried to interface RotorS plugins with mavros, didn't work. Somehow I couldn't configure mavlink_simulator to accept udp connection
+15. Replanning does not take into account the current position of the drone. This could be perhaps due to the issue of not being sure if the position of the drone relative to the world frame is accurate, due to possible drift from VIO.
 
 ## Changes TODO
-1. Try out XTDrones with an older version of the PX4 repo 
-    - If this does not prove to be very useful, it is best to just stick with SDFs
+0. Add multi drone support
+    - Move all important topics to the top level file (i.e. pose, depth image, point cloud)
 
-2. For camera pose relative to base_link, consider adding an extrinsic parameters ROS param to gridmap, like what is done for intrinsic parameters?
+1. See how ego swarm playground publishes depth camera data 
 
-3. Investigate fault with gridmap
-    - Look at raycastProcess
-
-2. Look at transform issue between base_link and map, how to broadcast that transform properly? Maybe look at XTDrone simulation?
+2. For trajectory server, read the current state of the mavros/state topic before determining the starting state machine state.
+3. For camera pose relative to base_link, consider adding an extrinsic parameters ROS param to gridmap, like what is done for intrinsic parameters?
+4. Look at transform issue between base_link and map, how to broadcast that transform properly? Maybe look at XTDrone simulation?
     - Use GPS ground truth?
-3. Replanning does not take into account the current position of the drone? Why is that so?
-6. Extend to multiple drones
-
-7. Investigate changing the custom GridMap implementation to alternatives such as Octomap but still consider the potential performance issues with an established library.
+5. Extend to multiple drones
 
 ## Issues
 1. Start of planned trajectory is not based on the drone's actual position but rather the drone's predicted position.
@@ -106,3 +111,4 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 0. Adapt simulation to size of acutal drone to be used
 1. Downsampling of point cloud
 2. Port to ROS2
+3. Investigate changing the custom GridMap implementation to alternatives such as Octomap but still consider the potential performance issues with an established library.

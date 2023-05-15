@@ -15,8 +15,6 @@
 
 using namespace Eigen;
 
-
-// TODO Add Emergency state
 /* State machine  */
 enum ServerState
 {
@@ -29,7 +27,6 @@ enum ServerState
   E_STOP,
 };
 
-// TODO Add Emergency stop
 /* State machine  */
 enum ServerEvent
 {
@@ -40,7 +37,6 @@ enum ServerEvent
   E_STOP_E,         // 4
   EMPTY_E,          // 5
 };
-
 
 class TrajServer{
 public:

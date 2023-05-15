@@ -9,6 +9,8 @@
     <!-- number of moving objects -->
     <arg name="obj_num" value="10" />
 
+    <arg name="drone_id_ns"  value="drone$(arg drone_id)"/>
+
     <!-- Ego Planner params -->
     <include file="$(find ego_planner)/launch/advanced_param.xml">
         <arg name="drone_id" value="$(arg drone_id)"/>
@@ -17,23 +19,23 @@
         <arg name="map_size_z_" value="$(arg map_size_z)"/>
         <arg name="obj_num_set" value="$(arg obj_num)" />
 
-        <arg name="odometry_topic" value="/mavros/local_position/odom"/>
+        <arg name="odometry_topic" value="/$(arg drone_id_ns)/mavros/local_position/odom"/>
 
         <!-- camera pose: transform of camera frame in the world frame -->
         <!-- depth topic: depth image, 640x480 by default -->
         <!-- don't set cloud_topic if you already set these ones! -->
-        <arg name="depth_topic" value="/iris_depth_camera/camera/depth/image_raw"/>
+        <!-- <arg name="depth_topic" value="/iris_depth_camera/camera/depth/image_raw"/> -->
         <!-- <arg name="camera_pose_topic" value="/mavros/local_position/pose"/> -->
-        <arg name="camera_pose_topic" value="/iris_depth_camera/camera/pose"/>
-        <!-- <arg name="depth_topic" value="pcl_render_node/depth"/> -->
+        <!-- <arg name="camera_pose_topic" value="/iris_depth_camera/camera/pose"/> -->
+        <arg name="depth_topic" value="pcl_render_node/depth"/>
+        <arg name="camera_pose_topic" value="/$(arg drone_id_ns)/mavros/local_position/pose"/>
         
         <!-- topic of point cloud measurement, such as from LIDAR  -->
         <!-- don't set camera pose and depth, if you already set this one! -->
         <!-- <arg name="cloud_topic" value="/iris_depth_camera/camera/depth/points"/> -->
-        <arg name="cloud_topic" value="/dummy_topic"/>
+        <arg name="cloud_topic" value="/$(arg drone_id_ns)/map"/>
 
-        <!-- intrinsic params of the depth camera -->'
-        
+        <!-- intrinsic params of the depth camera -->
         <!-- The values here are for the libgazebo_ros_openni_kinect gazebo simulated camera -->
         <arg name="cx" value="424.5"/>
         <arg name="cy" value="240.5"/>
@@ -86,5 +88,7 @@
         <param name="tf45" value="false"/>
         <param name="drone_id" value="drone_id"/>
     </node>
+
+    
 
 </launch>
