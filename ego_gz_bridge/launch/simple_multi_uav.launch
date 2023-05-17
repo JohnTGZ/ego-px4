@@ -1,11 +1,8 @@
 <launch>
+  <arg name="num_drones" value="7"/>
   <arg name="map_size_x" value="80.0"/>
   <arg name="map_size_y" value="80.0"/>
   <arg name="map_size_z" value=" 3.0"/>
-  <arg name="init_x"     value="-31"/>
-  <arg name="init_y"     value="-0.0"/>
-  <arg name="init_z"     value="1.5"/>
-
   <arg name="odometry_topic" value="mavros/local_position/odom" />
   <arg name="pose_topic" value="mavros/local_position/pose" />
   <arg name="point_cloud_topic" value="map" />
@@ -17,9 +14,17 @@
     <arg name="broadcast_ip" value="127.0.0.255"/>
   </include>
 			
+  <!-- Add static transform from world to map -->
+  <node pkg="tf" type="static_transform_publisher" 
+    name="world_to_map_tf" 
+    args="0 0 0 0 0 0 1 world map 100" />
+
   <!-- Drone number 0 -->
   <include file="$(find ego_gz_bridge)/launch/uav.launch">
     <arg name="drone_id"   value="0"/>
+    <arg name="init_x"     value="-1.0"/>
+    <arg name="init_y"     value="-1.0"/>
+    <arg name="init_z"     value="0.0"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
     <arg name="map_size_y" value="$(arg map_size_y)"/>
     <arg name="map_size_z" value="$(arg map_size_z)"/>
@@ -32,6 +37,9 @@
   <!-- Drone number 1 -->
   <include file="$(find ego_gz_bridge)/launch/uav.launch">
     <arg name="drone_id"   value="1"/>
+    <arg name="init_x"     value="1.0"/>
+    <arg name="init_y"     value="1.0"/>
+    <arg name="init_z"     value="0.0"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
     <arg name="map_size_y" value="$(arg map_size_y)"/>
     <arg name="map_size_z" value="$(arg map_size_z)"/>
@@ -40,11 +48,5 @@
     <arg name="depth_img_topic" value="$(arg depth_img_topic)"/>
     <arg name="point_cloud_topic" value="$(arg point_cloud_topic)"/>
   </include>
-
-  <!-- Add static transform from world to map -->
-  <node pkg="tf" type="static_transform_publisher" 
-    name="world_to_map_tf" 
-    args="0 0 0 0 0 0 1 world map 100" />
-
 
 </launch>

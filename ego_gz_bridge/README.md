@@ -18,7 +18,7 @@ This package contains the bridge to link Egoswarm V2 algorithms, the gazebo simu
 ```bash 
 export ROS_DISTRO="noetic"
 
-sudo apt install tmux python3-vcstool -y
+sudo apt install tmux python3-vcstool xmlstarlet -y
 # Install ROS dependencies
 sudo apt install ros-noetic-tf2-sensor-msgs -y
 sudo apt-get install ros-${ROS_DISTRO}-mavlink ros-${ROS_DISTRO}-mavros ros-${ROS_DISTRO}-mavros-extras ros-${ROS_DISTRO}-mavros-msgs -y
@@ -89,16 +89,14 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 15. Replanning does not take into account the current position of the drone. This could be perhaps due to the issue of not being sure if the position of the drone relative to the world frame is accurate, due to possible drift from VIO.
 
 ## Changes TODO
-0. Add multi drone support
-    - Move all important topics to the top level file (i.e. pose, depth image, point cloud)
-
 1. See how ego swarm playground publishes depth camera data 
-
 2. For trajectory server, read the current state of the mavros/state topic before determining the starting state machine state.
+
+3. Test compilation of radxa
 3. For camera pose relative to base_link, consider adding an extrinsic parameters ROS param to gridmap, like what is done for intrinsic parameters?
 4. Look at transform issue between base_link and map, how to broadcast that transform properly? Maybe look at XTDrone simulation?
     - Use GPS ground truth?
-5. Extend to multiple drones
+5. Issue a set of waypoints via an action goal/message
 
 ## Issues
 1. Start of planned trajectory is not based on the drone's actual position but rather the drone's predicted position.

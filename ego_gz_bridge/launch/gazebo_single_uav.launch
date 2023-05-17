@@ -4,11 +4,6 @@
   <arg name="z_pos" default="0.0"/>
   <arg name="world_name" default="$(find ego_gz_bridge)/simulation/worlds/ego_test.world"/>
   <arg name="model" default="iris_demo"/>
-
-  <!-- <env name="GAZEBO_PLUGIN_PATH" value="${GAZEBO_PLUGIN_PATH}:/home/john/raynor_ws/PX4-Autopilot/build/px4_sitl_default/build_gazebo-classic"/>
-  <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:/home/john/raynor_ws/PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models"/> -->
-
-  <!-- <node pkg="ego_gz_bridge" name="ego_gz_bridge_node" type="ego_gz_bridge_node" output="screen"/> -->
     
   <node pkg="tf" type="static_transform_publisher" 
     name="base_link_to_camera_link_tf" 
@@ -27,7 +22,6 @@
     <arg name="headless" value="false"/>
     <arg name="debug" value="false"/>
   </include>
-
 
   <param name="robot_description" 
     command="$(find xacro)/xacro $(find ego_gz_bridge)/simulation/models/$(arg model)/$(arg model).sdf" />
