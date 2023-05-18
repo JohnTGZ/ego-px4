@@ -7,8 +7,7 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 SOURCE_WS="source $SCRIPT_DIR/../../../../devel/setup.bash &&"
 
 CMD_0="roslaunch ego_gz_bridge rviz.launch"
-CMD_1="roslaunch ego_gz_bridge multi_uav.launch"
-CMD_2="roslaunch ego_gz_bridge simple_sim.launch"
+CMD_1="roslaunch ego_gz_bridge simple_multi_uav.launch"
 CMD_3="rostopic pub /traj_server_event std_msgs/Int8 \"data: 0 \" "
 
 # rostopic pub /traj_server_event std_msgs/Int8 "data: 0" 

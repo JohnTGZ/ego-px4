@@ -3,7 +3,9 @@
   <arg name="y_pos" default="0.0"/>
   <arg name="z_pos" default="0.0"/>
   <arg name="world_name" default="$(find ego_gz_bridge)/simulation/worlds/ego_test.world"/>
-  <arg name="vehicle" default="plane"/>
+  <!-- <arg name="vehicle" default="plane"/> -->
+  <!-- <arg name="vehicle" default="iris"/> -->
+  <arg name="vehicle" default="iris_depth_camera"/>
 
   <!-- <env name="GAZEBO_PLUGIN_PATH" value="${GAZEBO_PLUGIN_PATH}:/home/john/raynor_ws/PX4-Autopilot/build/px4_sitl_default/build_gazebo-classic"/>
   <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:/home/john/raynor_ws/PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models"/> -->
@@ -46,12 +48,12 @@
           <arg name="mavlink_cam_udp_port" value="$(eval 14530 + arg('ID'))"/>
       </include>
       <!-- MAVROS -->
-      <!-- <include file="$(find mavros)/launch/px4.launch">
+      <include file="$(find mavros)/launch/px4.launch">
           <arg name="fcu_url" value="$(arg fcu_url)"/>
           <arg name="gcs_url" value=""/>
           <arg name="tgt_system" value="$(eval 1 + arg('ID'))"/>
           <arg name="tgt_component" value="1"/>
-      </include> -->
+      </include>
   </group>
 
   <!-- <node pkg="tf" type="static_transform_publisher" 
@@ -59,7 +61,7 @@
     args="0.0 0 0.0 1.5707963 3.1415927 1.5707963 /base_link /camera_link 100" /> -->
 
   <!-- UAV1 -->
-  <!-- <group ns="drone1">
+  <group ns="drone1">
       <arg name="ID" value="1"/>
       <arg name="fcu_url" default="udp://:14541@localhost:14581"/>
       <include file="$(find px4)/launch/single_vehicle_spawn_sdf.launch">
@@ -80,7 +82,7 @@
           <arg name="tgt_system" value="$(eval 1 + arg('ID'))"/>
           <arg name="tgt_component" value="1"/>
       </include>
-  </group> -->
+  </group>
 
   <!-- <param name="robot_description" 
     command="$(find xacro)/xacro $(find ego_gz_bridge)/simulation/models/$(arg model)/$(arg model).sdf" />

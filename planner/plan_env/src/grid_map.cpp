@@ -616,10 +616,10 @@ void GridMap::cloudCallback(const sensor_msgs::PointCloud2ConstPtr &img)
         fabs(devi(2)) < mp_.local_update_range_(2))
     {
       /* Add non-inflated occupancy grid */
-      Eigen::Vector3i actual_pt;
-      posToIndex(p3d, actual_pt);
-      int idx_actual = toAddress(actual_pt);  
-      md_.occupancy_buffer_[idx_actual] = mp_.clamp_max_log_;
+      // Eigen::Vector3i actual_pt;
+      // posToIndex(p3d, actual_pt);
+      // int idx_actual = toAddress(actual_pt);  
+      // md_.occupancy_buffer_[idx_actual] = mp_.clamp_max_log_;
 
       /* inflate the point */
       for (int x = -inf_step; x <= inf_step; ++x){

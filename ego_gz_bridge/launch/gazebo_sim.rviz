@@ -5,18 +5,19 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /drone0_ego1
         - /drone0_ego1/Planning1
         - /drone0_ego1/Planning1/InitTraj1
-        - /drone1_ego1
+        - /drone0_mavros1
+        - /drone0_mavros1/Perception1
+        - /drone0_mavros1/Perception1/drone cloud1
+        - /drone0_mavros1/Localization1
+        - /drone0_mavros1/Localization1//mavros/local_position/pose1
         - /drone1_ego1/Planning1
         - /drone1_ego1/Mapping1/occ1
         - /drone1_mavros1/Perception1
-        - /drone2_ego1
         - /drone2_ego1/Planning1
         - /drone2_mavros1/Localization1
         - /drone2_mavros1/Planning1
-        - /drone3_ego1
         - /drone3_ego1/Planning1
       Splitter Ratio: 0.436956524848938
     Tree Height: 517
@@ -38,7 +39,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: occ_inflated
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -224,7 +225,7 @@ Visualization Manager:
               Color: 32; 74; 135
               Color Transformer: FlatColor
               Decay Time: 0
-              Enabled: false
+              Enabled: true
               Invert Rainbow: false
               Max Color: 255; 255; 255
               Min Color: 0; 0; 0
@@ -239,7 +240,7 @@ Visualization Manager:
               Unreliable: false
               Use Fixed Frame: true
               Use rainbow: true
-              Value: false
+              Value: true
           Enabled: true
           Name: Perception
         - Class: rviz/Group
@@ -257,7 +258,7 @@ Visualization Manager:
               Shaft Length: 1
               Shaft Radius: 0.05000000074505806
               Shape: Arrow
-              Topic: /drone0/mavros/local_position/pose
+              Topic: /mavros/local_position/pose
               Unreliable: false
               Value: true
             - Angle Tolerance: 0.10000000149011612
@@ -341,7 +342,7 @@ Visualization Manager:
           Marker Topic: /drone0/uav/mesh
           Name: Marker
           Namespaces:
-            drone: true
+            {}
           Queue Size: 100
           Value: true
       Enabled: true
@@ -595,7 +596,7 @@ Visualization Manager:
           Marker Topic: /drone1/uav/mesh
           Name: Marker
           Namespaces:
-            drone: true
+            {}
           Queue Size: 100
           Value: true
       Enabled: true
@@ -849,7 +850,7 @@ Visualization Manager:
           Marker Topic: /drone2/uav/mesh
           Name: Marker
           Namespaces:
-            drone: true
+            {}
           Queue Size: 100
           Value: true
       Enabled: true
@@ -1103,7 +1104,7 @@ Visualization Manager:
           Marker Topic: /drone3/uav/mesh
           Name: Marker
           Namespaces:
-            drone: true
+            {}
           Queue Size: 100
           Value: true
       Enabled: true
@@ -1153,7 +1154,7 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.4147958755493164
+      Pitch: 0.42479586601257324
       Target Frame: my_view
       Yaw: 3.9485371112823486
     Saved:

@@ -10,7 +10,7 @@ void TrajServer::init(ros::NodeHandle& nh)
   nh.param("traj_server/time_forward", time_forward_, -1.0);
   nh.param("traj_server/pub_cmd_freq", pub_cmd_freq_, 25.0);
   nh.param("traj_server/state_machine_tick_freq", sm_tick_freq_, 50.0);
-  nh.param("traj_server/take_off_height", takeoff_height_, 1.0);
+  nh.param("traj_server/takeoff_height", takeoff_height_, 1.0);
 
   /* Subscribers */
   poly_traj_sub_ = nh.subscribe("planning/trajectory", 10, &TrajServer::polyTrajCallback, this);

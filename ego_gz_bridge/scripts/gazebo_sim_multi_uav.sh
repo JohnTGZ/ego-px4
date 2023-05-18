@@ -19,7 +19,7 @@ export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$EGO_GZ_BRIDGE_DIR:$PX4_AUTOPILOT_REPO
 "
 
 CMD_0="
-roslaunch ego_gz_bridge gazebo_multi_uav.launch world_name:=$SCRIPT_DIR/../simulation/worlds/ego_test.world
+roslaunch ego_gz_bridge gazebo_multi_uav_sdf.launch world_name:=$SCRIPT_DIR/../simulation/worlds/ego_test.world
 "
 
 # CMD_0="

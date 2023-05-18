@@ -21,7 +21,7 @@ export ROS_DISTRO="noetic"
 sudo apt install tmux python3-vcstool xmlstarlet -y
 # Install ROS dependencies
 sudo apt install ros-noetic-tf2-sensor-msgs -y
-sudo apt-get install ros-${ROS_DISTRO}-mavlink ros-${ROS_DISTRO}-mavros ros-${ROS_DISTRO}-mavros-extras ros-${ROS_DISTRO}-mavros-msgs -y
+sudo apt-get install ros-${ROS_DISTRO}-mavlink ros-${ROS_DISTRO}-mavros ros-${ROS_DISTRO}-mavros-msgs ros-${ROS_DISTRO}-mavros-extras -y
 sudo apt-get install ros-${ROS_DISTRO}-joy ros-${ROS_DISTRO}-octomap-ros ros-${ROS_DISTRO}-control-toolbox -y
 # Install external dependencies
 sudo apt-get install protobuf-compiler libeigen3-dev libopencv-dev libgoogle-glog-dev -y
@@ -31,6 +31,9 @@ sudo bash ./install_geographiclib_datasets.sh
 
 2. Clone repositories
 ```bash
+mkdir -p ~/raynor_ws/src/
+cd ~/raynor_ws/src
+git clone https://github.com/JohnTGZ/ego-px4.git
 vcs import < thirdparty.repos --recursive
 ```
 
@@ -41,7 +44,6 @@ cd ../../../PX4-Autopilot
 bash ./Tools/setup/ubuntu.sh --no-nuttx
 # Make SITL target for Gazebo simulation
 DONT_RUN=1 make px4_sitl_default gazebo-classic
-
 # If you screw up, clean up the build files in the repo:
 make distclean
 ```
@@ -49,11 +51,11 @@ make distclean
 # Quick start
 ```bash
 cd ~/raynor_ws/src/ego-px4/ego_gz_bridge/scripts
-./test_simple_sim.sh
-# In another terminal
-roslaunch px4sim1 sample.launch
+# Simulation using simple quad simulator
+./simple_sim.sh
+# Simulation using gazebo
+./gazebo_sim_single_uav.sh
 ```
-
 
 ```bash
 # Taking off
@@ -61,7 +63,6 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 0" --once
 # Taking Mission
 rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 ```
-
 
 # EGOSwarm V2 modifications
 
@@ -77,7 +78,6 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 6. Remapped `grid_map/cloud` topic in `advanced_param.xml` to `/iris_depth_camera/camera/depth/points`
 7. Move model assets and  files to `ego_gz_bridge`. 
 8. Changed `grid_map/frame_id` from `world` to `camera_link` in `advanced_param.xml`
-
 9. Moved `poscmd_2_odom` and `odom_visualization` nodes from simulator.xml up one level to advanced_param.xml
 10. Create another node just to transform point clouds to add publishing of point clouds from depth camera transformed from `camera_link` to `map` frame
 11. Added a "complete" state machine to trajectory server with safety features such as Emergency stop and the ability to switch between HOVER and MISSION mode.
@@ -89,21 +89,16 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 15. Replanning does not take into account the current position of the drone. This could be perhaps due to the issue of not being sure if the position of the drone relative to the world frame is accurate, due to possible drift from VIO.
 
 ## Changes TODO
-1. See how ego swarm playground publishes depth camera data 
-2. For trajectory server, read the current state of the mavros/state topic before determining the starting state machine state.
-
-3. Test compilation of radxa
+1. For trajectory server, read the current state of the mavros/state topic before determining the starting state machine state.
+2. Test compilation on radxa
 3. For camera pose relative to base_link, consider adding an extrinsic parameters ROS param to gridmap, like what is done for intrinsic parameters?
 4. Look at transform issue between base_link and map, how to broadcast that transform properly? Maybe look at XTDrone simulation?
     - Use GPS ground truth?
 5. Issue a set of waypoints via an action goal/message
 
 ## Issues
-1. Start of planned trajectory is not based on the drone's actual position but rather the drone's predicted position.
-2. Drone deviates significantly from trajectory path (Perhaps because we are sending PVA commands directly to the PX4 controller, and the controller model used in the egoswarm repo might not fit the actual dynamics of the drone)
-3. Drone's heading does not always face it's direction of travel (results in depth camera not facing the direction of travel)
-
-4. Disabling of offboard mode for land state would be a good feature. Current challenge to implement it is to be able to reliably check that the drone has actually landed (Otherwise it will be stuck in AUTO.LOITER while hovering in the air, being unable to disarm).
+1. Drone's heading does not always face it's direction of travel (results in depth camera not facing the direction of travel)
+2. Disabling of offboard mode for land state would be a good feature. Current challenge to implement it is to be able to reliably check that the drone has actually landed (Otherwise it will be stuck in AUTO.LOITER while hovering in the air, being unable to disarm).
 
 ## Future TODO
 0. Adapt simulation to size of acutal drone to be used

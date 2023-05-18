@@ -2,7 +2,7 @@
     <!-- Drone id -->
     <arg name="drone_id"/>
     <!-- Drone formation params -->
-    <arg name="num_drones" value="7"/>
+    <arg name="num_drones"/>
     <!-- Map params -->
     <arg name="map_size_x_"/>
     <arg name="map_size_y_"/>
@@ -136,10 +136,10 @@
         <param name="optimization/max_acc" value="$(arg max_acc)" type="double"/>
         <param name="optimization/max_jer" value="$(arg max_jer)" type="double"/>
         <param name="optimization/record_opt" value="true"/>
-        <!-- formation-->
+        <!-- formation: Affects the target position of the drone relative to the goal-->
         <param name="formation/num" value="$(arg num_drones)"/>
         <rosparam param="formation/start">[-32,0,1]</rosparam>
-        <rosparam param="formation/drone0">[  0, 0, 0]</rosparam>
+        <rosparam param="formation/drone0">[  1, -0.5, 0]</rosparam>
         <rosparam param="formation/drone1">[  1,  0.5, 0]</rosparam>
         <rosparam param="formation/drone2">[  0, -1.0, 0]</rosparam>
         <rosparam param="formation/drone3">[  0,  0.0, 0]</rosparam>

@@ -7,6 +7,10 @@ SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 PX4_AUTOPILOT_REPO_DIR="$SCRIPT_DIR/../../../../PX4-Autopilot"
 
+# SOURCE_PX4_AUTOPILOT="
+# source $PX4_AUTOPILOT_REPO_DIR/Tools/simulation/gazebo-classic/setup_gazebo.bash $PX4_AUTOPILOT_REPO_DIR $PX4_AUTOPILOT_REPO_DIR/build/px4_sitl_default &&
+# source $SCRIPT_DIR/../../../../devel/setup.bash &&
+# "
 SOURCE_PX4_AUTOPILOT="
 source $PX4_AUTOPILOT_REPO_DIR/Tools/simulation/gazebo-classic/setup_gazebo.bash $PX4_AUTOPILOT_REPO_DIR $PX4_AUTOPILOT_REPO_DIR/build/px4_sitl_default &&
 source $SCRIPT_DIR/../../../../devel/setup.bash &&
@@ -19,8 +23,11 @@ export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$PX4_AUTOPILOT_REPO_DIR:$PX4_AUTOPILOT
 CMD_0="
 roslaunch ego_gz_bridge gazebo_single_uav.launch world_name:=$SCRIPT_DIR/../simulation/worlds/ego_test.world
 "
+# CMD_1="
+# roslaunch px4 px4.launch fcu_url:="udp://:14540@0.0.0.0:14550"
+# "
 CMD_1="
-roslaunch px4 px4.launch fcu_url:="udp://:14540@0.0.0.0:14550"
+roslaunch px4 px4.launch
 "
 CMD_2="roslaunch mavros px4.launch fcu_url:="udp://:14540@0.0.0.0:14550""
 
