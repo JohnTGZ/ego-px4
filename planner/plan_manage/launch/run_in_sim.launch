@@ -48,7 +48,7 @@
         <arg name="max_jer" value="20.0" />
 
         <!--always set to 1.5 times grater than sensing horizen-->
-        <arg name="planning_horizon" value="1.5" />
+        <arg name="planning_horizon" value="7.5" />
         <!-- TODO: What is this param? -->
         <arg name="use_distinctive_trajs" value="false" />
         <!-- 1: use 2D Nav Goal to select goal  -->

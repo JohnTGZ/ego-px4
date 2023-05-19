@@ -1,16 +1,21 @@
 <launch>
-  <arg name="x_pos" default="0.0"/>
+  <arg name="x_pos" default="0.5"/>
   <arg name="y_pos" default="0.0"/>
   <arg name="z_pos" default="0.0"/>
+
+  <arg name="x_pos2" default="-0.5"/>
+  <arg name="y_pos2" default="0.0"/>
+
   <arg name="world_name" default="$(find ego_gz_bridge)/simulation/worlds/ego_test.world"/>
-  <arg name="model" default="iris_depth_camera"/>
+  <arg name="model" default="iris_demo"/>
+  <arg name="model2" default="iris_demo2"/>
     
   <!-- <env name="GAZEBO_PLUGIN_PATH" value="${GAZEBO_PLUGIN_PATH}:/home/john/raynor_ws/PX4-Autopilot/build/px4_sitl_default/build_gazebo-classic"/> -->
   <!-- <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:/home/john/raynor_ws/PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models"/> -->
 
-  <!-- <node pkg="tf" type="static_transform_publisher" 
+  <node pkg="tf" type="static_transform_publisher" 
     name="base_link_to_camera_link_tf" 
-    args="0.0 0 0.0 1.5707963 3.1415927 1.5707963 /base_link /camera_link 100" /> -->
+    args="0.0 0 0.0 1.5707963 3.1415927 1.5707963 /base_link /camera_link 100" />
 
   <!-- Add static transform from world to map -->
   <node pkg="tf" type="static_transform_publisher" 
@@ -18,7 +23,7 @@
     args="0 0 0 0 0 0 1 world map 100" />
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <!-- <arg name="world_name" value="$(arg world_name)"/> -->
+    <arg name="world_name" value="$(arg world_name)"/>
     <arg name="paused" value="false"/>
     <arg name="use_sim_time" value="true"/>
     <arg name="gui" value="true"/>
@@ -26,15 +31,49 @@
     <arg name="debug" value="false"/>
   </include>
 
-  <!-- <param name="robot_description" 
+  <!-- Spawn drone 1 -->
+  <param name="robot_description" 
     command="$(find xacro)/xacro $(find ego_gz_bridge)/simulation/models/$(arg model)/$(arg model).sdf" />
-  <node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf"  
-    args="-sdf -model $(arg model) -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos) -param robot_description" /> -->
+  <node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf1"  
+    args="-sdf -model $(arg model) -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos) -param robot_description" />
+
+  <group ns="drone0">
+    <!-- MAVROS and vehicle configs -->
+    <arg name="ID" value="0"/>
+    <arg name="fcu_url" default="udp://:14540@localhost:14580"/>
+    <!-- MAVROS -->
+    <include file="$(find mavros)/launch/px4.launch">
+      <arg name="fcu_url" value="$(arg fcu_url)"/>
+      <arg name="gcs_url" value=""/>
+      <arg name="tgt_system" value="$(eval 1 + arg('ID'))"/>
+      <arg name="tgt_component" value="1"/>
+    </include>
+  </group>
+
+  <!-- Spawn drone 2 -->
+  <param name="robot_description2" 
+    command="$(find xacro)/xacro $(find ego_gz_bridge)/simulation/models/$(arg model2)/$(arg model2).sdf" />
+  <node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf2"  
+    args="-sdf -model $(arg model2) -x $(arg x_pos2) -y $(arg y_pos2) -z $(arg z_pos) -param robot_description2" />
+
+
+  <group ns="drone1">
+    <!-- MAVROS and vehicle configs -->
+    <arg name="ID" value="1"/>
+    <arg name="fcu_url" default="udp://:14541@localhost:14581"/>
+    <!-- MAVROS -->
+    <include file="$(find mavros)/launch/px4.launch">
+      <arg name="fcu_url" value="$(arg fcu_url)"/>
+      <arg name="gcs_url" value=""/>
+      <arg name="tgt_system" value="$(eval 1 + arg('ID'))"/>
+      <arg name="tgt_component" value="1"/>
+    </include>
+  </group>
 
   <!-- <arg name="sdf" default="$(find ego_gz_bridge)/simulation/models/$(arg model)/$(arg model).sdf"/>
   <node name="$(anon vehicle_spawn)" pkg="gazebo_ros" type="spawn_model" output="screen" 
     args="-sdf -file $(arg sdf) -model $(arg model) -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos) "/> -->
 
-  <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find ego_gz_bridge)/launch/gazebo_sim.rviz" required="true" /> -->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find ego_gz_bridge)/launch/gazebo_sim.rviz" required="true" />
 
 </launch>

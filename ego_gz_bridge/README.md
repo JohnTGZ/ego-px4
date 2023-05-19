@@ -89,6 +89,11 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 15. Replanning does not take into account the current position of the drone. This could be perhaps due to the issue of not being sure if the position of the drone relative to the world frame is accurate, due to possible drift from VIO.
 
 ## Changes TODO
+
+- Promethus & px4_command
+0. Create demo video for gazebo px4 simulation 
+0. Benchmark the replanning time for each drone's planner (are they close enough to the specified replanning frequency?)
+1. Look into gazebo plugins for quadrotor dynamics?
 1. For trajectory server, read the current state of the mavros/state topic before determining the starting state machine state.
 2. Test compilation on radxa
 3. For camera pose relative to base_link, consider adding an extrinsic parameters ROS param to gridmap, like what is done for intrinsic parameters?

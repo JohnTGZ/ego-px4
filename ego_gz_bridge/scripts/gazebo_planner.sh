@@ -7,11 +7,12 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 SOURCE_WS="source $SCRIPT_DIR/../../../../devel/setup.bash &&"
 
-CMD_0="roslaunch ego_gz_bridge rviz.launch"
-CMD_1="roslaunch ego_planner trajectory_server.launch"
+CMD_0="roslaunch ego_planner trajectory_server.launch"
+CMD_1="roslaunch ego_planner demo.launch"
 CMD_2="rostopic pub /traj_server_event std_msgs/Int8 \"data: 0 \" "
 
 # rostopic pub /traj_server_event std_msgs/Int8 "data: 0" 
+# rostopic pub /traj_server_event std_msgs/Int8 "data: 2" 
 
 if [ "$SESSIONEXISTS" = "" ]
 then 
