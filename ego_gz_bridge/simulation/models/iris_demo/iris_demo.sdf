@@ -367,7 +367,76 @@
       </axis>
     </joint> -->
 
-    <include>
+    <link name="camera_link">
+      <pose>0.1 0 0 0 0 0</pose>
+      <inertial>
+        <pose>0.01 0.025 0.025 0 0 0</pose>
+        <mass>0.01</mass>
+        <inertia>
+          <ixx>4.15e-6</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>2.407e-6</iyy>
+          <iyz>0</iyz>
+          <izz>2.407e-6</izz>
+        </inertia>
+      </inertial>
+      <visual name="visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://realsense_camera/meshes/realsense.dae</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <sensor name="depth_camera" type="depth"><update_rate>10</update_rate>
+        <camera>
+          <horizontal_fov>1.5009831567</horizontal_fov>
+          <image>
+            <format>R8G8B8</format>
+            <width>848</width>
+            <height>480</height>
+          </image>
+          <clip>
+            <near>0.001</near> <!-- Intel RealSense D455 -->
+            <far>65.535</far> <!-- Intel RealSense D455 -->
+          </clip>
+        </camera>
+        <plugin filename="libgazebo_ros_openni_kinect.so" name="camera_controller">
+          <cameraName>camera</cameraName>
+          <robotNamespace></robotNamespace>
+          <alwaysOn>true</alwaysOn>
+          <updateRate>10</updateRate>
+          <pointCloudCutoff>0.2</pointCloudCutoff>
+          <pointCloudCutoffMax>65.535</pointCloudCutoffMax>
+          <imageTopicName>rgb/image_raw</imageTopicName>
+          <cameraInfoTopicName>rgb/camera_info</cameraInfoTopicName>
+          <depthImageTopicName>depth/image_raw</depthImageTopicName>
+          <depthImageCameraInfoTopicName>depth/camera_info</depthImageCameraInfoTopicName>
+          <pointCloudTopicName>depth/points</pointCloudTopicName>
+          <frameName>camera_link</frameName>
+          <distortion_k1>0.0</distortion_k1>
+          <distortion_k2>0.0</distortion_k2>
+          <distortion_k3>0.0</distortion_k3>
+          <distortion_t1>0.0</distortion_t1>
+          <distortion_t2>0.0</distortion_t2>
+        </plugin></sensor>
+    </link>
+
+    <joint name="depth_camera_joint" type="revolute">
+      <child>camera_link</child>
+      <parent>base_link</parent>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <upper>0</upper>
+          <lower>0</lower>
+        </limit>
+      </axis>
+    </joint>
+
+
+    <!-- <include>
       <uri>model://depth_camera</uri>
       <pose>0.1 0 0 0 0 0</pose>
     </include>
@@ -381,7 +450,7 @@
           <lower>0</lower>
         </limit>
       </axis>
-    </joint>
+    </joint> -->
 
     <!-- Plugins -->
 
@@ -463,7 +532,6 @@
     </plugin>
 
     <!-- GPS -->
-
     <include>
       <uri>model://gps</uri>
       <pose>0.1 0 0 0 0 0</pose>
@@ -474,13 +542,7 @@
       <parent>base_link</parent>
     </joint>
 
-    <plugin name='gps_plugin' filename='libgazebo_gps_plugin.so'>
-      <robotNamespace/>
-      <gpsNoise>1</gpsNoise>
-    </plugin>
-
     <!-- Other sensors -->
-
     <plugin name='groundtruth_plugin' filename='libgazebo_groundtruth_plugin.so'>
       <robotNamespace/>
     </plugin>

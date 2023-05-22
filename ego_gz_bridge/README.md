@@ -22,7 +22,7 @@ sudo apt install tmux python3-vcstool xmlstarlet -y
 # Install ROS dependencies
 sudo apt install ros-noetic-tf2-sensor-msgs -y
 sudo apt-get install ros-${ROS_DISTRO}-mavlink ros-${ROS_DISTRO}-mavros ros-${ROS_DISTRO}-mavros-msgs ros-${ROS_DISTRO}-mavros-extras -y
-sudo apt-get install ros-${ROS_DISTRO}-joy ros-${ROS_DISTRO}-octomap-ros ros-${ROS_DISTRO}-control-toolbox -y
+# sudo apt-get install ros-${ROS_DISTRO}-joy ros-${ROS_DISTRO}-octomap-ros ros-${ROS_DISTRO}-control-toolbox -y
 # Install external dependencies
 sudo apt-get install protobuf-compiler libeigen3-dev libopencv-dev libgoogle-glog-dev -y
 wget https://raw.githubusercontent.com/mavlink/mavros/master/mavros/scripts/install_geographiclib_datasets.sh
@@ -34,13 +34,14 @@ sudo bash ./install_geographiclib_datasets.sh
 mkdir -p ~/raynor_ws/src/
 cd ~/raynor_ws/src
 git clone https://github.com/JohnTGZ/ego-px4.git
+cd ego-px4/ego_gz_bridge
 vcs import < thirdparty.repos --recursive
 ```
 
 3. Install PX4 firmware
 ```bash
 # cd to PX4-Autopilot repo
-cd ../../../PX4-Autopilot
+cd ~/raynor_ws/PX4-Autopilot
 bash ./Tools/setup/ubuntu.sh --no-nuttx
 # Make SITL target for Gazebo simulation
 DONT_RUN=1 make px4_sitl_default gazebo-classic
@@ -89,9 +90,10 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 15. Replanning does not take into account the current position of the drone. This could be perhaps due to the issue of not being sure if the position of the drone relative to the world frame is accurate, due to possible drift from VIO.
 
 ## Changes TODO
+0. Separate the launch files for gazebo/px4 and ego_planner
+1. Remove all unnecessary nodes from ego_gz_bridge
 
 - Promethus & px4_command
-0. Create demo video for gazebo px4 simulation 
 0. Benchmark the replanning time for each drone's planner (are they close enough to the specified replanning frequency?)
 1. Look into gazebo plugins for quadrotor dynamics?
 1. For trajectory server, read the current state of the mavros/state topic before determining the starting state machine state.

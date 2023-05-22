@@ -1,79 +1,139 @@
 <launch>
-  <arg name="x_pos" default="0.5"/>
-  <arg name="y_pos" default="0.0"/>
-  <arg name="z_pos" default="0.0"/>
+    <!-- Drone id -->
+    <arg name="drone_id"/>
+    <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+    <arg name="num_drones"/>
+    <arg name="init_x"/>
+    <arg name="init_y"/>
+    <arg name="init_z"/>
+    <!-- size of map, change the size inflate x, y, z according to your application -->
+    <arg name="map_size_x"/>
+    <arg name="map_size_y"/>
+    <arg name="map_size_z"/>
+    <!-- Gazebo parameters -->
+    <arg name="vehicle"/>
+    <arg name="model"/>
+    <!-- PX4 configs -->
+    <arg name="est" default="ekf2"/>
+    <arg name="interactive" default="true"/>
+    <env name="PX4_SIM_MODEL" value="gazebo-classic_$(arg vehicle)" />
 
-  <arg name="x_pos2" default="-0.5"/>
-  <arg name="y_pos2" default="0.0"/>
+    <!-- Input/output topics -->
+    <arg name="command_topic"/>
+    <arg name="odometry_topic"/>
+    <arg name="pose_topic"/>
+    <arg name="depth_img_topic"/>
+    <arg name="point_cloud_topic"/>
+    <!-- number of moving objects -->
+    <arg name="obj_num" value="10" />
 
-  <arg name="world_name" default="$(find ego_gz_bridge)/simulation/worlds/ego_test.world"/>
-  <arg name="model" default="iris_demo"/>
-  <arg name="model2" default="iris_demo2"/>
+    <!-- Ego Planner params -->
+    <include file="$(find ego_gz_bridge)/launch/advanced_param.xml">
+        <arg name="drone_id" value="$(arg drone_id)"/>
+        <arg name="num_drones" value="$(arg num_drones)" />
+
+        <arg name="map_size_x_" value="$(arg map_size_x)"/>
+        <arg name="map_size_y_" value="$(arg map_size_y)"/>
+        <arg name="map_size_z_" value="$(arg map_size_z)"/>
+        <arg name="obj_num_set" value="$(arg obj_num)" />
+
+        <!-- grid_map/pose_type: Toggle between subscription to
+            1 ("grid_map/pose") or 
+            2 ("grid_map/odom") 
+            for use as camera pose/odom-->
+        <arg name="POSE_TYPE" value="1" />
+        <!-- grid_map/sensor_type: Toggle between subscription to
+            1 ("grid_map/cloud") or 
+            2 ("grid_map/depth") 
+            for use as camera sensor input -->
+        <arg name="SENSOR_TYPE" value="2" />
+
+        <!-- camera pose: transform of camera frame in the world frame -->
+        <!-- depth topic: depth image, 640x480 by default -->
+        <!-- don't set cloud_topic if you already set these ones! -->
+        <arg name="depth_topic" value="/$(arg drone_id_ns)/$(arg depth_img_topic)"/>
+        <!-- topic of point cloud measurement, such as from LIDAR  -->
+        <!-- don't set camera pose and depth, if you already set this one! -->
+        <arg name="cloud_topic" value="/$(arg drone_id_ns)/$(arg point_cloud_topic)"/>
+
+        <arg name="pose_topic" value="/$(arg drone_id_ns)/$(arg pose_topic)"/>
+        <arg name="odometry_topic" value="/$(arg drone_id_ns)/$(arg odometry_topic)"/>
+
+        <!-- intrinsic params of the depth camera -->
+        <!-- The values here are for the libgazebo_ros_openni_kinect gazebo simulated camera -->
+        <arg name="cx" value="424.5"/>
+        <arg name="cy" value="240.5"/>
+        <arg name="fx" value="454.6857718666893"/>
+        <arg name="fy" value="454.6857718666893"/>
+
+        <!-- maximum velocity, acceleration and jerk the drone will reach -->
+        <arg name="max_vel" value="1.5" />
+        <arg name="max_acc" value="3.0" />
+        <arg name="max_jer" value="20.0" />
+
+        <!--always set to 1.5 times grater than sensing horizen-->
+        <arg name="planning_horizon" value="7.5" />
+        <!-- TODO: What is this param? -->
+        <arg name="use_distinctive_trajs" value="false" />
+        <!-- 1: use 2D Nav Goal to select goal  -->
+        <!-- 2: use global waypoints below  -->
+        <arg name="flight_type" value="1" />
+
+        <!-- global waypoints -->
+        <!-- It generates a piecewise min-snap traj passing all waypoints -->
+        <arg name="num_waypoints" value="0" />
+    </include>
+
+    <!-- Trajectory server -->
+    <node pkg="ego_planner" name="drone_$(arg drone_id)_traj_server" type="traj_server_node" output="screen">
+        <!-- Subscribed Topics -->
+        <remap from="~planning/trajectory" to="/drone_$(arg drone_id)_planning/trajectory"/>
+        <remap from="/mavros/state" to="/$(arg drone_id_ns)/mavros/state"/>
+        <remap from="/mavros/local_position/pose" to="/$(arg drone_id_ns)/$(arg pose_topic)"/>
+        <!-- Published Topics -->
+        <remap from="/mavros/setpoint_raw/local" to="/$(arg drone_id_ns)/$(arg command_topic)"/>
+        <!-- Service clients -->
+        <remap from="/mavros/cmd/arming" to="/$(arg drone_id_ns)/mavros/cmd/arming"/>
+        <remap from="/mavros/set_mode" to="/$(arg drone_id_ns)/mavros/set_mode"/>
+        
+        <param name="traj_server/time_forward" value="1.0" type="double"/>
+        <!-- Frequency to publish command -->
+        <param name="traj_server/pub_cmd_freq" value="25.0" type="double"/>
+        <param name="traj_server/state_machine_tick_freq" value="50.0" type="double"/>
+        <param name="traj_server/takeoff_height" value="2.0" type="double"/>
+    </node>
+
+    <group ns="$(arg drone_id_ns)">
+      <!-- MAVROS and vehicle configs -->
+      <arg name="mavlink_udp_port" default="$(eval 14560 + arg('drone_id'))"/>
+      <arg name="mavlink_tcp_port" default="$(eval 4560 + arg('drone_id'))"/>
+      <arg name="fcu_addr" default="$(eval 14540 + arg('drone_id'))"/>
+      <arg name="fcu_port" default="$(eval 14580 + arg('drone_id'))"/>
+      <arg name="fcu_url" default="udp://:$(arg fcu_addr)@localhost:$(arg fcu_port)"/>
+
+      <!-- generate sdf vehicle model -->
+      <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) $(find ego_gz_bridge)/simulation/models/$(arg model)/$(arg model).sdf"/>
+      <!-- <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) -u '//plugin[@name=&quot;camera_controller&quot;]/robotNamespace' -v $(arg drone_ns) $(find ego_gz_bridge)/simulation/models/$(arg model)/$(arg model).sdf"/> -->
+
+      <param command="$(arg cmd)" name="model_description"/>
+      <!-- PX4 SITL -->
+      <arg unless="$(arg interactive)" name="px4_command_arg1" value=""/>
+      <arg     if="$(arg interactive)" name="px4_command_arg1" value="-d"/>
+      <node name="sitl_$(arg drone_id)" pkg="px4" type="px4" output="screen" args="$(find px4)/build/px4_sitl_default/etc -s etc/init.d-posix/rcS -i $(arg drone_id) -w sitl_$(arg vehicle)_$(arg drone_id) $(arg px4_command_arg1)">
+      </node>
+      <!-- spawn vehicle -->
+      <node name="$(arg vehicle)_$(arg drone_id)_spawn" output="screen" pkg="gazebo_ros" type="spawn_model" 
+        args="-sdf -param model_description -model $(arg drone_id_ns) 
+        -x $(arg init_x) -y $(arg init_y) -z $(arg init_z) -R 0.0 -P 0.0 -Y 0.0"/>
     
-  <!-- <env name="GAZEBO_PLUGIN_PATH" value="${GAZEBO_PLUGIN_PATH}:/home/john/raynor_ws/PX4-Autopilot/build/px4_sitl_default/build_gazebo-classic"/> -->
-  <!-- <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:/home/john/raynor_ws/PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models"/> -->
+      <!-- MAVROS -->
+      <include file="$(find mavros)/launch/px4.launch">
+        <arg name="fcu_url" value="$(arg fcu_url)"/>
+        <arg name="gcs_url" value=""/>
+        <arg name="tgt_system" value="$(eval 1 + arg('drone_id'))"/>
+        <arg name="tgt_component" value="1"/>
+      </include>
+    </group>
 
-  <node pkg="tf" type="static_transform_publisher" 
-    name="base_link_to_camera_link_tf" 
-    args="0.0 0 0.0 1.5707963 3.1415927 1.5707963 /base_link /camera_link 100" />
-
-  <!-- Add static transform from world to map -->
-  <node pkg="tf" type="static_transform_publisher" 
-    name="world_to_map_tf" 
-    args="0 0 0 0 0 0 1 world map 100" />
-
-  <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="world_name" value="$(arg world_name)"/>
-    <arg name="paused" value="false"/>
-    <arg name="use_sim_time" value="true"/>
-    <arg name="gui" value="true"/>
-    <arg name="headless" value="false"/>
-    <arg name="debug" value="false"/>
-  </include>
-
-  <!-- Spawn drone 1 -->
-  <param name="robot_description" 
-    command="$(find xacro)/xacro $(find ego_gz_bridge)/simulation/models/$(arg model)/$(arg model).sdf" />
-  <node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf1"  
-    args="-sdf -model $(arg model) -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos) -param robot_description" />
-
-  <group ns="drone0">
-    <!-- MAVROS and vehicle configs -->
-    <arg name="ID" value="0"/>
-    <arg name="fcu_url" default="udp://:14540@localhost:14580"/>
-    <!-- MAVROS -->
-    <include file="$(find mavros)/launch/px4.launch">
-      <arg name="fcu_url" value="$(arg fcu_url)"/>
-      <arg name="gcs_url" value=""/>
-      <arg name="tgt_system" value="$(eval 1 + arg('ID'))"/>
-      <arg name="tgt_component" value="1"/>
-    </include>
-  </group>
-
-  <!-- Spawn drone 2 -->
-  <param name="robot_description2" 
-    command="$(find xacro)/xacro $(find ego_gz_bridge)/simulation/models/$(arg model2)/$(arg model2).sdf" />
-  <node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf2"  
-    args="-sdf -model $(arg model2) -x $(arg x_pos2) -y $(arg y_pos2) -z $(arg z_pos) -param robot_description2" />
-
-
-  <group ns="drone1">
-    <!-- MAVROS and vehicle configs -->
-    <arg name="ID" value="1"/>
-    <arg name="fcu_url" default="udp://:14541@localhost:14581"/>
-    <!-- MAVROS -->
-    <include file="$(find mavros)/launch/px4.launch">
-      <arg name="fcu_url" value="$(arg fcu_url)"/>
-      <arg name="gcs_url" value=""/>
-      <arg name="tgt_system" value="$(eval 1 + arg('ID'))"/>
-      <arg name="tgt_component" value="1"/>
-    </include>
-  </group>
-
-  <!-- <arg name="sdf" default="$(find ego_gz_bridge)/simulation/models/$(arg model)/$(arg model).sdf"/>
-  <node name="$(anon vehicle_spawn)" pkg="gazebo_ros" type="spawn_model" output="screen" 
-    args="-sdf -file $(arg sdf) -model $(arg model) -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos) "/> -->
-
-  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find ego_gz_bridge)/launch/gazebo_sim.rviz" required="true" />
 
 </launch>

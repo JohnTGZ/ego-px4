@@ -18,13 +18,14 @@ source $PX4_AUTOPILOT_REPO_DIR/Tools/simulation/gazebo-classic/setup_gazebo.bash
 export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$EGO_GZ_BRIDGE_DIR:$PX4_AUTOPILOT_REPO_DIR:$PX4_AUTOPILOT_REPO_DIR/Tools/simulation/gazebo-classic/sitl_gazebo-classic &&
 "
 
+# SOURCE_PX4_AUTOPILOT="
+# export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$EGO_GZ_BRIDGE_DIR:$PX4_AUTOPILOT_REPO_DIR:$PX4_AUTOPILOT_REPO_DIR/Tools/simulation/gazebo-classic/sitl_gazebo-classic &&
+# "
+
 CMD_0="
-roslaunch ego_gz_bridge gazebo_multi_uav_sdf.launch world_name:=$SCRIPT_DIR/../simulation/worlds/ego_test.world
+roslaunch ego_gz_bridge gazebo_multi_uav.launch world_name:=$SCRIPT_DIR/../simulation/worlds/ego_test.world
 "
 
-# CMD_0="
-# roslaunch px4 multi_uav_mavros_sitl.launch
-# "
 
 if [ "$SESSIONEXISTS" = "" ]
 then 

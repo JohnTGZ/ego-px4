@@ -1,0 +1,114 @@
+<launch>
+  <!-- Initial position -->
+  <arg name="x_0" default="0.0"/>
+  <arg name="y_0" default="0.0"/>
+
+  <arg name="x_0" default="0.0"/>
+  <arg name="y_0" default="0.0"/>
+  <arg name="z_0" default="0.0"/>
+
+  <arg name="z_0" default="0.0"/>
+  <arg name="roll" default="0.0"/>
+  <arg name="pitch" default="0.0"/>
+  <arg name="yaw" default="0.0"/>
+
+  <arg name="world_name" default="$(find ego_gz_bridge)/simulation/worlds/ego_test.world"/>
+  <!-- <arg name="vehicle" default="iris"/> -->
+  <arg name="vehicle" default="iris"/>
+  <arg name="model" default="iris_demo"/>
+  <!-- PX4 configs -->
+  <arg name="est" default="ekf2"/>
+  <arg name="interactive" default="true"/>
+
+  <env name="PX4_SIM_MODEL" value="gazebo-classic_$(arg vehicle)" />
+
+  <!-- <node pkg="ego_gz_bridge" name="ego_gz_bridge_node" type="ego_gz_bridge_node" output="screen"/> -->
+  
+  <!-- Add static transform from world to map -->
+  <node pkg="tf" type="static_transform_publisher" 
+    name="world_to_map_tf" 
+    args="0 0 0 0 0 0 1 world map 100" />
+
+  <!-- Gazebo simulation -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(arg world_name)"/>
+    <arg name="paused" value="false"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="gui" value="true"/>
+    <arg name="headless" value="false"/>
+    <arg name="debug" value="false"/>
+    <arg name="verbose" value="true"/>
+  </include>
+
+  <!-- UAV0 -->
+  <group ns="drone0">
+    <!-- MAVROS and vehicle configs -->
+    <arg name="ID" value="0"/>
+    <arg name="drone_ns" value="drone$(arg ID)"/>
+    <arg name="mavlink_udp_port" default="$(eval 14560 + arg('ID'))"/>
+    <arg name="mavlink_tcp_port" default="$(eval 4560 + arg('ID'))"/>
+    <arg name="fcu_addr" default="$(eval 14540 + arg('ID'))"/>
+    <arg name="fcu_port" default="$(eval 14580 + arg('ID'))"/>
+    <arg name="fcu_url" default="udp://:$(arg fcu_addr)@localhost:$(arg fcu_port)"/>
+
+    <!-- generate sdf vehicle model -->
+    <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) $(find ego_gz_bridge)/simulation/models/$(arg model)/$(arg model).sdf"/>
+    <!-- <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) -u '//plugin[@name=&quot;camera_controller&quot;]/robotNamespace' -v $(arg drone_ns) $(find ego_gz_bridge)/simulation/models/$(arg model)/$(arg model).sdf"/> -->
+
+    <param command="$(arg cmd)" name="model_description"/>
+    <!-- PX4 SITL -->
+    <arg unless="$(arg interactive)" name="px4_command_arg1" value=""/>
+    <arg     if="$(arg interactive)" name="px4_command_arg1" value="-d"/>
+    <node name="sitl_$(arg ID)" pkg="px4" type="px4" output="screen" args="$(find px4)/build/px4_sitl_default/etc -s etc/init.d-posix/rcS -i $(arg ID) -w sitl_$(arg vehicle)_$(arg ID) $(arg px4_command_arg1)">
+    </node>
+    <!-- spawn vehicle -->
+    <node name="$(arg vehicle)_$(arg ID)_spawn" output="screen" pkg="gazebo_ros" type="spawn_model" 
+      args="-sdf -param model_description -model $(arg drone_ns) -x $(arg x_0) -y $(arg y_0) -z $(arg z_0) -R $(arg roll) -P $(arg pitch) -Y $(arg yaw)"/>
+  
+    <!-- MAVROS -->
+    <include file="$(find mavros)/launch/px4.launch">
+      <arg name="fcu_url" value="$(arg fcu_url)"/>
+      <arg name="gcs_url" value=""/>
+      <arg name="tgt_system" value="$(eval 1 + arg('ID'))"/>
+      <arg name="tgt_component" value="1"/>
+    </include>
+  </group>
+
+  <!-- UAV0 -->
+  <group ns="drone1">
+    <!-- MAVROS and vehicle configs -->
+    <arg name="ID" value="1"/>
+    <arg name="drone_ns" value="drone$(arg ID)"/>
+    <arg name="mavlink_udp_port" default="$(eval 14560 + arg('ID'))"/>
+    <arg name="mavlink_tcp_port" default="$(eval 4560 + arg('ID'))"/>
+    <arg name="fcu_addr" default="$(eval 14540 + arg('ID'))"/>
+    <arg name="fcu_port" default="$(eval 14580 + arg('ID'))"/>
+    <arg name="fcu_url" default="udp://:$(arg fcu_addr)@localhost:$(arg fcu_port)"/>
+
+    <!-- generate sdf vehicle model -->
+    <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) $(find ego_gz_bridge)/simulation/models/$(arg model)/$(arg model).sdf"/>
+    <!-- <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) -u '//plugin[@name=&quot;camera_controller&quot;]/robotNamespace' -v $(arg drone_ns) $(find ego_gz_bridge)/simulation/models/$(arg model)/$(arg model).sdf"/> -->
+
+    <param command="$(arg cmd)" name="model_description"/>
+    <!-- PX4 SITL -->
+    <arg unless="$(arg interactive)" name="px4_command_arg1" value=""/>
+    <arg     if="$(arg interactive)" name="px4_command_arg1" value="-d"/>
+    <node name="sitl_$(arg ID)" pkg="px4" type="px4" output="screen" args="$(find px4)/build/px4_sitl_default/etc -s etc/init.d-posix/rcS -i $(arg ID) -w sitl_$(arg vehicle)_$(arg ID) $(arg px4_command_arg1)">
+    </node>
+    <!-- spawn vehicle -->
+    <node name="$(arg vehicle)_$(arg ID)_spawn" output="screen" pkg="gazebo_ros" type="spawn_model" 
+      args="-sdf -param model_description -model $(arg drone_ns) 
+      -x $(arg x_0) -y $(arg y_0) -z $(arg z_0) -R $(arg roll) -P $(arg pitch) -Y $(arg yaw)"/>
+  
+    <!-- MAVROS -->
+    <include file="$(find mavros)/launch/px4.launch">
+      <arg name="fcu_url" value="$(arg fcu_url)"/>
+      <arg name="gcs_url" value=""/>
+      <arg name="tgt_system" value="$(eval 1 + arg('ID'))"/>
+      <arg name="tgt_component" value="1"/>
+    </include>
+  </group>
+
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find ego_gz_bridge)/launch/gazebo_sim.rviz" required="true" />
+
+</launch>

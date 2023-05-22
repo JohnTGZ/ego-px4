@@ -5,10 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /drone0_ego1
-        - /drone0_mavros1
         - /drone0_mavros1/Perception1/drone cloud1
-        - /drone0_mavros1/Localization1
         - /drone0_mavros1/Localization1//mavros/local_position/pose1
         - /drone1_ego1/Planning1
         - /drone1_ego1/Mapping1/occ1
@@ -18,6 +15,7 @@ Panels:
         - /drone2_mavros1/Localization1
         - /drone2_mavros1/Planning1
         - /drone3_ego1/Planning1
+        - /PointCloud21
       Splitter Ratio: 0.436956524848938
     Tree Height: 316
   - Class: rviz/Selection
@@ -27,7 +25,6 @@ Panels:
       - /2D Pose Estimate1
       - /2D Nav Goal1
       - /Publish Point1
-      - /3D Nav Goal1
     Name: Tool Properties
     Splitter Ratio: 0.5886790156364441
   - Class: rviz/Views
@@ -38,7 +35,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: occ
+    SyncSource: PointCloud2
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -1108,6 +1105,34 @@ Visualization Manager:
           Value: true
       Enabled: false
       Name: drone3_mavros
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: RGB8
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Min Color: 0; 0; 0
+      Name: PointCloud2
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.009999999776482582
+      Style: Flat Squares
+      Topic: /drone0/camera/depth/points
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 255; 255; 255
@@ -1137,7 +1162,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 11.617575645446777
+      Distance: 22.949899673461914
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -1145,17 +1170,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.8279833793640137
-        Y: -1.7784333229064941
+        X: 4.133971691131592
+        Y: 3.160309314727783
         Z: 2.9852017178200185e-06
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.5547956228256226
+      Pitch: 0.19979599118232727
       Target Frame: my_view
-      Yaw: 3.96353816986084
+      Yaw: 4.188534736633301
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:
@@ -1304,5 +1329,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1440
-  X: 2024
-  Y: 130
+  X: 698
+  Y: 185
