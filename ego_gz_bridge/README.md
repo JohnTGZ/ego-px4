@@ -5,12 +5,11 @@ This package contains the bridge to link Egoswarm V2 algorithms, the gazebo simu
 1. Ubuntu 20.04 with ROS Noetic
 2. vcstool: For repo setup 
 3. Simulation
-    - Gazebo Classic
-    - PX4-Autopilot
+    - Gazebo Classic (Version 11)
+    - PX4-Autopilot 
     - MavROS
-4. Swarm algorithm:
-    - EgoSwarm V2
-5. Other packages:
+    - Simple Quad Simulator
+4. Other packages:
     - Listed in setup
 
 # Setup
