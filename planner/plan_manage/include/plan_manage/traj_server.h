@@ -13,6 +13,8 @@
 #include <traj_utils/PolyTraj.h>
 #include <visualization_msgs/Marker.h>
 
+#include <tf/tf.h>
+
 using namespace Eigen;
 
 /* State machine  */

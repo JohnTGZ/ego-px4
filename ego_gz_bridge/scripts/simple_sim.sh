@@ -3,10 +3,20 @@
 SESSION="formation_sesh"
 SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
 
+#####
+# Directories
+#####
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+#####
+# Sourcing
+#####
 SOURCE_WS="source $SCRIPT_DIR/../../../../devel/setup.bash &&"
 
-CMD_0="roslaunch ego_gz_bridge rviz.launch"
+#####
+# Commands
+#####
+CMD_0="roslaunch ego_gz_bridge rviz.launch config:=simple_sim"
 CMD_1="roslaunch ego_gz_bridge simple_multi_uav.launch"
 CMD_3="rostopic pub /traj_server_event std_msgs/Int8 \"data: 0 \" "
 

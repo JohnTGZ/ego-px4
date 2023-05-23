@@ -10,14 +10,7 @@
     <arg name="map_size_x"/>
     <arg name="map_size_y"/>
     <arg name="map_size_z"/>
-    <!-- Gazebo parameters -->
-    <arg name="vehicle"/>
-    <arg name="model"/>
-    <!-- PX4 configs -->
-    <arg name="est" default="ekf2"/>
-    <arg name="interactive" default="true"/>
-    <env name="PX4_SIM_MODEL" value="gazebo-classic_$(arg vehicle)" />
-
+    <arg name="map_path"/>
     <!-- Input/output topics -->
     <arg name="command_topic"/>
     <arg name="odometry_topic"/>
@@ -46,20 +39,22 @@
             1 ("grid_map/cloud") or 
             2 ("grid_map/depth") 
             for use as camera sensor input -->
-        <arg name="SENSOR_TYPE" value="2" />
+        <arg name="SENSOR_TYPE" value="1" />
+
+        <arg name="transform_camera_pose" value="true"/>
 
         <!-- camera pose: transform of camera frame in the world frame -->
         <!-- depth topic: depth image, 640x480 by default -->
         <!-- don't set cloud_topic if you already set these ones! -->
         <arg name="depth_topic" value="/$(arg drone_id_ns)/$(arg depth_img_topic)"/>
+        <arg name="pose_topic" value="/$(arg drone_id_ns)/$(arg pose_topic)"/>
+        
         <!-- topic of point cloud measurement, such as from LIDAR  -->
         <!-- don't set camera pose and depth, if you already set this one! -->
         <arg name="cloud_topic" value="/$(arg drone_id_ns)/$(arg point_cloud_topic)"/>
-
-        <arg name="pose_topic" value="/$(arg drone_id_ns)/$(arg pose_topic)"/>
         <arg name="odometry_topic" value="/$(arg drone_id_ns)/$(arg odometry_topic)"/>
 
-        <!-- intrinsic params of the depth camera -->
+        <!-- intrinsic params of the depth camera, only valid if SENSOR_TYPE is 2 -->
         <!-- The values here are for the libgazebo_ros_openni_kinect gazebo simulated camera -->
         <arg name="cx" value="424.5"/>
         <arg name="cy" value="240.5"/>
@@ -82,6 +77,7 @@
         <!-- global waypoints -->
         <!-- It generates a piecewise min-snap traj passing all waypoints -->
         <arg name="num_waypoints" value="0" />
+
     </include>
 
     <!-- Trajectory server -->
@@ -103,37 +99,20 @@
         <param name="traj_server/takeoff_height" value="2.0" type="double"/>
     </node>
 
+    <!-- Simulated quadcopter -->
     <group ns="$(arg drone_id_ns)">
-      <!-- MAVROS and vehicle configs -->
-      <arg name="mavlink_udp_port" default="$(eval 14560 + arg('drone_id'))"/>
-      <arg name="mavlink_tcp_port" default="$(eval 4560 + arg('drone_id'))"/>
-      <arg name="fcu_addr" default="$(eval 14540 + arg('drone_id'))"/>
-      <arg name="fcu_port" default="$(eval 14580 + arg('drone_id'))"/>
-      <arg name="fcu_url" default="udp://:$(arg fcu_addr)@localhost:$(arg fcu_port)"/>
-
-      <!-- generate sdf vehicle model -->
-      <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) $(find ego_gz_bridge)/simulation/models/$(arg model)/$(arg model).sdf"/>
-      <!-- <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) -u '//plugin[@name=&quot;camera_controller&quot;]/robotNamespace' -v $(arg drone_ns) $(find ego_gz_bridge)/simulation/models/$(arg model)/$(arg model).sdf"/> -->
-
-      <param command="$(arg cmd)" name="model_description"/>
-      <!-- PX4 SITL -->
-      <arg unless="$(arg interactive)" name="px4_command_arg1" value=""/>
-      <arg     if="$(arg interactive)" name="px4_command_arg1" value="-d"/>
-      <node name="sitl_$(arg drone_id)" pkg="px4" type="px4" output="screen" args="$(find px4)/build/px4_sitl_default/etc -s etc/init.d-posix/rcS -i $(arg drone_id) -w sitl_$(arg vehicle)_$(arg drone_id) $(arg px4_command_arg1)">
-      </node>
-      <!-- spawn vehicle -->
-      <node name="$(arg vehicle)_$(arg drone_id)_spawn" output="screen" pkg="gazebo_ros" type="spawn_model" 
-        args="-sdf -param model_description -model $(arg drone_id_ns) 
-        -x $(arg init_x) -y $(arg init_y) -z $(arg init_z) -R 0.0 -P 0.0 -Y 0.0"/>
-    
-      <!-- MAVROS -->
-      <include file="$(find mavros)/launch/px4.launch">
-        <arg name="fcu_url" value="$(arg fcu_url)"/>
-        <arg name="gcs_url" value=""/>
-        <arg name="tgt_system" value="$(eval 1 + arg('drone_id'))"/>
-        <arg name="tgt_component" value="1"/>
-      </include>
+        <node pkg="px4sim1" type="px4_quad_node" name="px4_quad_node" output="screen">
+            <rosparam command="load" file="$(find px4sim1)/../config/simulation_parameters.yaml" />
+            <rosparam command="load" file="$(find px4sim1)/../config/map_parameters.yaml" />
+            <param name="agent/mesh_resource" value="file://$(find px4sim1)/../meshes/fake_drone.dae" />
+            <param name="agent/id" value="$(arg drone_id_ns)"/>
+            <param name="agent/start_x" value="$(arg init_x)"/>
+            <param name="agent/start_y" value="$(arg init_y)"/>
+            <param name="agent/start_z" value="$(arg init_z)"/>
+            <!-- yaw offset currently not being used -->
+            <param name="agent/yaw_offset" value="0.0"/>
+            <param name="map/path" value="$(arg map_path)"/>
+        </node>
     </group>
-
 
 </launch>

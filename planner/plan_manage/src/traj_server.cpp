@@ -93,6 +93,18 @@ void TrajServer::UAVStateCb(const mavros_msgs::State::ConstPtr &msg)
 void TrajServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
   uav_pose_ = *msg;
+  // Convert quaternion to yaw
+
+  tf::Quaternion q(
+    msg->pose.orientation.x,
+    msg->pose.orientation.y,
+    msg->pose.orientation.z,
+    msg->pose.orientation.w);
+
+  tf::Matrix3x3 m(q);
+  double roll, pitch, yaw;
+  m.getRPY(roll, pitch, yaw);
+  ROS_INFO("RPY: (%.2f, %.2f, %.2f)", roll, pitch, yaw);
 }
 
 void TrajServer::serverEventCb(const std_msgs::Int8::ConstPtr & msg)
@@ -414,8 +426,10 @@ void TrajServer::execMission()
     last_mission_yaw_ = yaw_yawdot.first;
     last_mission_pos_ = pos;
 
+    uint16_t type_mask = 2048; // Ignore yaw rate
+
     // publish PVA commands
-    publish_cmd(pos, vel, acc, jer, yaw_yawdot.first, yaw_yawdot.second);
+    publish_cmd(pos, vel, acc, jer, yaw_yawdot.first, yaw_yawdot.second, type_mask);
   }
   // IF time elapsed is longer then duration of trajectory, then nothing is done
   else if (t_cur >= traj_duration_) // Finished trajectory
@@ -615,7 +629,7 @@ void TrajServer::publish_cmd(Vector3d p, Vector3d v, Vector3d a, Vector3d j, dou
   pos_cmd.header.frame_id = "world";
   pos_cmd.coordinate_frame = mavros_msgs::PositionTarget::FRAME_LOCAL_NED;
   pos_cmd.type_mask = type_mask;
-  // pos_cmd.type_mask = 3072; // Ignore Yaw
+  // pos_cmd.type_mask = 1024; // Ignore Yaw
   // pos_cmd.type_mask = 2048; // ignore yaw_rate
   // pos_cmd.type_mask = 2496; // Ignore Acceleration
   // pos_cmd.type_mask = 3520; // Ignore Acceleration and Yaw

@@ -17,6 +17,7 @@
     <arg name="depth_topic"/>
     <arg name="cloud_topic"/>
     <!-- Camera params -->
+    <arg name="transform_camera_pose"/>
     <arg name="cx"/>
     <arg name="cy"/>
     <arg name="fx"/>
@@ -59,6 +60,9 @@
         <remap from="~grid_map/cloud" to="$(arg cloud_topic)"/>
         <remap from="~grid_map/depth" to = "$(arg depth_topic)"/>
 
+        <!-- If true, camera pose is transformed using a pre-defined translation/rotation matrix -->
+        <remap from="~grid_map/transform_camera_pose" to = "$(arg transform_camera_pose)"/>
+
         <!-- Frame ID to use for publishing (NOT for the input sensor data) -->
         <param name="grid_map/frame_id" value="world"/>
 
@@ -91,7 +95,7 @@
         <param name="grid_map/local_update_range_z" value="4.5" />
         <param name="grid_map/obstacles_inflation" value="0.0" />
         <param name="grid_map/local_map_margin" value="10"/>
-        <param name="grid_map/ground_height" value="-0.1"/>
+        <param name="grid_map/ground_height" value="-0.25"/>
         <!-- camera parameter -->
         <param name="grid_map/cx" value="$(arg cx)"/>
         <param name="grid_map/cy" value="$(arg cy)"/>

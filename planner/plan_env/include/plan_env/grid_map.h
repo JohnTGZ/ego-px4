@@ -102,8 +102,11 @@ struct MappingData
 
   // camera position and pose data
 
-  Eigen::Vector3d camera_pos_, last_camera_pos_;
-  Eigen::Matrix3d camera_r_m_, last_camera_r_m_;
+  // Eigen::Vector3d camera_pos_, last_camera_pos_;
+  // Eigen::Matrix3d camera_r_m_, last_camera_r_m_;
+  Eigen::Vector3d camera_pos_{0.0, 0.0, 0.0}, last_camera_pos_{0.0, 0.0, 0.0};
+  Eigen::Matrix3d camera_r_m_;
+  Eigen::Matrix3d last_camera_r_m_;
 
   // Transformation of camera to body frame
   Eigen::Matrix4d cam2body_;
@@ -115,7 +118,8 @@ struct MappingData
 
   // flags of map state
 
-  bool occ_need_update_, local_updated_;
+  bool occ_need_update_; //Indicates if occupancy map needs to be updated. Typically set to true after receiving new sensor data (e.g. depth image, point cloud pose, odom). 
+  bool local_updated_; // Indicates if map has already updated the local cache of occupancy grid, so that inflation can be performed
   bool has_first_depth_;
   bool has_odom_, has_cloud_;
 
@@ -124,10 +128,10 @@ struct MappingData
   bool flag_depth_odom_timeout_;
   bool flag_use_depth_fusion;
 
-  // depth image projected point cloud
-
-  vector<Eigen::Vector3d> proj_points_;
-  int proj_points_cnt; // pixels from input depth map
+  bool init_depth_img_{false}; // First depth image received
+  
+  vector<Eigen::Vector3d> proj_points_; // depth image projected point cloud
+  int proj_points_cnt; // Number of pixels from input depth map that have been projected
 
   // flag buffers for speeding up raycasting
 
@@ -235,6 +239,9 @@ public:
 private:
   MappingParameters mp_;
   MappingData md_;
+
+  // If true, camera pose is transformed using a pre-defined translation/rotation matrix
+  bool transform_cam_pose_{true};
 
   std::string node_name_;
 
