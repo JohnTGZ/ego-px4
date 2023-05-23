@@ -91,28 +91,30 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 16. Rerouted topics for gazebo simulation
 17. Fixed projected poitns from depth camera not being intialized with the right size.
 18. Fixed issue where drone's heading does not always face it's direction of travel (results in depth camera not facing the direction of travel and knocking into obstacles it didn't detect in it's desired trajectory). The fix is to ignore the yaw rate being supplied by the command.
-19. 
 
 ## Changes TODO
-0. Test with multiple droness
+### Simulation
+- Test with multiple droness
+- Look into gazebo plugins for quadrotor dynamics?
+- Look into Promethus & px4_command
 
-1. Add body to camera transform as a matrix param
-2. Remove all unnecessary nodes from ego_gz_bridge
+### gridmap
+- Add body to camera transform as a matrix param
 
-- Promethus & px4_command
-0. Benchmark the replanning time for each drone's planner (are they close enough to the specified replanning frequency?)
-1. Look into gazebo plugins for quadrotor dynamics?
-1. For trajectory server, read the current state of the mavros/state topic before determining the starting state machine state.
-5. Issue a set of waypoints via an action goal/message
+### Trajectory Server
+- For trajectory server, read the current state of the mavros/state topic before determining the starting state machine state.
+- Issue a set of waypoints via an action goal/message
+
+### Benchmarking/Diagnostics
+- Benchmark the replanning time for each drone's planner (are they close enough to the specified replanning frequency?)
 
 ### Hardware
-1. Test compilation on radxa
+- Test compilation on radxa
 
 ## Issues
-2. Disabling of offboard mode for land state would be a good feature. Current challenge to implement it is to be able to reliably check that the drone has actually landed (Otherwise it will be stuck in AUTO.LOITER while hovering in the air, being unable to disarm).
+- Disabling of offboard mode for land state would be a good feature. Current challenge to implement it is to be able to reliably check that the drone has actually landed (Otherwise it will be stuck in AUTO.LOITER while hovering in the air, being unable to disarm).
 
 ## Future TODO
-0. Adapt simulation to size of acutal drone to be used
-1. Downsampling of point cloud
-2. Port to ROS2
-3. Investigate changing the custom GridMap implementation to alternatives such as Octomap but still consider the potential performance issues with an established library.
+- Adapt simulation to size of acutal drone to be used
+- Port to ROS2
+- Investigate changing the custom GridMap implementation to alternatives such as Octomap but still consider the potential performance issues with an established library.
