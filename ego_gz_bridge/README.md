@@ -11,7 +11,7 @@ This package contains the bridge to link Egoswarm V2 algorithms, the gazebo simu
 4. Swarm algorithm:
     - EgoSwarm V2
 5. Other packages:
-    - ros-noetic-tf2-sensor-msgs
+    - Listed in setup
 
 # Setup
 1. Install binaries
