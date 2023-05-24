@@ -4,9 +4,12 @@ using namespace Eigen;
 
 void TrajServer::init(ros::NodeHandle& nh)
 {
-  ROS_INFO_NAMED(node_name_, "Initializing");
+  logInfo("Initializing");
 
-  /* Params*/
+  /* ROS Params*/
+  nh.param("drone_id", drone_id_, 0);
+  nh.param("origin_frame", origin_frame_, std::string("world"));
+
   nh.param("traj_server/time_forward", time_forward_, -1.0);
   nh.param("traj_server/pub_cmd_freq", pub_cmd_freq_, 25.0);
   nh.param("traj_server/state_machine_tick_freq", sm_tick_freq_, 50.0);
@@ -46,12 +49,12 @@ void TrajServer::polyTrajCallback(traj_utils::PolyTrajPtr msg)
 {
   if (msg->order != 5)
   {
-    ROS_ERROR("[traj_server] Only support trajectory order equals 5 now!");
+    logError("[traj_server] Only support trajectory order equals 5 now!");
     return;
   }
   if (msg->duration.size() * (msg->order + 1) != msg->coef_x.size())
   {
-    ROS_ERROR("[traj_server] WRONG trajectory parameters, ");
+    logError("[traj_server] WRONG trajectory parameters, ");
     return;
   }
 
@@ -86,7 +89,7 @@ void TrajServer::polyTrajCallback(traj_utils::PolyTrajPtr msg)
 
 void TrajServer::UAVStateCb(const mavros_msgs::State::ConstPtr &msg)
 {
-  // ROS_INFO_THROTTLE_NAMED(5.0, node_name_, "State: Mode[%s], Connected[%d], Armed[%d]", msg->mode.c_str(), msg->connected, msg->armed);
+  // logInfoThrottled(string_format("State: Mode[%s], Connected[%d], Armed[%d]", msg->mode.c_str(), msg->connected, msg->armed), 1.0);
   uav_current_state_ = *msg;
 }
 
@@ -95,22 +98,22 @@ void TrajServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg)
   uav_pose_ = *msg;
   // Convert quaternion to yaw
 
-  tf::Quaternion q(
-    msg->pose.orientation.x,
-    msg->pose.orientation.y,
-    msg->pose.orientation.z,
-    msg->pose.orientation.w);
+  // tf::Quaternion q(
+  //   msg->pose.orientation.x,
+  //   msg->pose.orientation.y,
+  //   msg->pose.orientation.z,
+  //   msg->pose.orientation.w);
 
-  tf::Matrix3x3 m(q);
-  double roll, pitch, yaw;
-  m.getRPY(roll, pitch, yaw);
-  ROS_INFO("RPY: (%.2f, %.2f, %.2f)", roll, pitch, yaw);
+  // tf::Matrix3x3 m(q);
+  // double roll, pitch, yaw;
+  // m.getRPY(roll, pitch, yaw);
+  // logInfo(string_format("RPY: (%.2f, %.2f, %.2f)", roll, pitch, yaw));
 }
 
 void TrajServer::serverEventCb(const std_msgs::Int8::ConstPtr & msg)
 {
   if (msg->data < 0 || msg->data > ServerEvent::EMPTY_E){
-    ROS_ERROR_NAMED(node_name_, "Invalid server event, ignoring...");
+    logError("Invalid server event, ignoring...");
   } 
   setServerEvent(ServerEvent(msg->data));
 }
@@ -119,7 +122,6 @@ void TrajServer::serverEventCb(const std_msgs::Int8::ConstPtr & msg)
 
 void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
 {
-  // ROS_INFO_THROTTLE_NAMED(1.0, node_name_, "Exec Traj timer cb");
   switch (getServerState()){
     case ServerState::INIT:
       // Do nothing, drone is not initialized
@@ -143,12 +145,12 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
     
     case ServerState::MISSION:
       if (isMissionComplete()){
-        ROS_INFO_THROTTLE_NAMED(2.0, node_name_, "Waiting for mission...");
+        logInfoThrottled("Waiting for mission", 5.0);
         execHover();
       }
       else {
         if (isPlannerHeartbeatTimeout()){
-          ROS_ERROR("[traj_server] Lost heartbeat from the planner, is he dead?");
+          logError("[traj_server] Lost heartbeat from the planner, is he dead?");
           execHover();
         }
 
@@ -165,7 +167,7 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
 
 void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
 {
-  // ROS_INFO_THROTTLE_NAMED(5.0, node_name_, "Current Server State: [%s]", StateToString(getServerState()).c_str());
+  // logInfoThrottled(string_format("Current Server State: [%s]", StateToString(getServerState()).c_str()), 1.0);
 
   switch (getServerState())
   {
@@ -173,34 +175,35 @@ void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
       {
         // Wait for FCU Connection
         if (uav_current_state_.connected){
+          logInfo("[INIT] Connected to flight stack!");
           setServerState(ServerState::IDLE);
         }
         else {
-          ROS_INFO_THROTTLE_NAMED(1.0, node_name_, "[INIT] Initializing Server, waiting for connection to FCU...");
+          logInfoThrottled("[INIT] Initializing Server, waiting for connection to FCU...", 2.0 );
         }
 
         break;
       }
     case ServerState::IDLE:
-      ROS_INFO_THROTTLE_NAMED(1.0, node_name_, "[IDLE] Ready to take off");
+      logInfoThrottled("[IDLE] Ready to take off", 5.0 );
 
       switch (getServerEvent())
       {
         case TAKEOFF_E:
-          ROS_INFO_NAMED(node_name_, "[IDLE] UAV Attempting takeoff");
+          logInfo("[IDLE] UAV Attempting takeoff");
           setServerState(ServerState::TAKEOFF);
           break;
         case LAND_E:
-          ROS_WARN_NAMED(node_name_, "[IDLE] IGNORED EVENT. UAV has not taken off, unable to LAND");
+          logWarn("[IDLE] IGNORED EVENT. UAV has not taken off, unable to LAND");
           break;
         case MISSION_E:
-          ROS_WARN_NAMED(node_name_, "[IDLE] IGNORED EVENT. Please TAKEOFF first before setting MISSION mode");
+          logWarn("[IDLE] IGNORED EVENT. Please TAKEOFF first before setting MISSION mode");
           break;
         case CANCEL_MISSION_E:
-          ROS_WARN_NAMED(node_name_, "[IDLE] IGNORED EVENT. No mission to cancel");
+          logWarn("[IDLE] IGNORED EVENT. No mission to cancel");
           break;
         case E_STOP_E:
-          ROS_FATAL_NAMED(node_name_, "[IDLE] EMERGENCY STOP ACTIVATED!");
+          logFatal("[IDLE] EMERGENCY STOP ACTIVATED!");
           setServerState(ServerState::E_STOP);
           break;
         case EMPTY_E:
@@ -214,20 +217,20 @@ void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
       switch (getServerEvent())
       {
         case TAKEOFF_E:
-          ROS_WARN_NAMED(node_name_, "[TAKEOFF] IGNORED EVENT. UAV already attempting taking off");
+          logWarn("[TAKEOFF] IGNORED EVENT. UAV already attempting taking off");
           break;
         case LAND_E:
-          ROS_INFO_NAMED(node_name_, "[TAKEOFF] Attempting landing");
+          logInfo("[TAKEOFF] Attempting landing");
           setServerState(ServerState::LAND);
           break;
         case MISSION_E:
-          ROS_WARN_NAMED(node_name_, "[TAKEOFF] IGNORED EVENT. Wait until UAV needs to take off before accepting mission command");
+          logWarn("[TAKEOFF] IGNORED EVENT. Wait until UAV needs to take off before accepting mission command");
           break;
         case CANCEL_MISSION_E:
-          ROS_WARN_NAMED(node_name_, "[TAKEOFF] IGNORED EVENT. No mission to cancel");
+          logWarn("[TAKEOFF] IGNORED EVENT. No mission to cancel");
           break;
         case E_STOP_E:
-          ROS_FATAL_NAMED(node_name_, "[TAKEOFF] EMERGENCY STOP ACTIVATED!");
+          logFatal("[TAKEOFF] EMERGENCY STOP ACTIVATED!");
           setServerState(ServerState::E_STOP);
           break;
         case EMPTY_E:
@@ -236,16 +239,16 @@ void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
       }
 
       if (!is_uav_ready()){
-        ROS_INFO("Calling toggle offboard mode");
+        logInfo("[TAKEOFF] Calling toggle offboard mode");
         toggle_offboard_mode(true);
       }
 
       if (isTakenOff()){
-        ROS_INFO_NAMED(node_name_, "[TAKEOFF] Take off complete");
+        logInfo("[TAKEOFF] Take off complete");
         setServerState(ServerState::HOVER);
       }
       else {
-        ROS_INFO_THROTTLE_NAMED(1.0, node_name_, "[TAKEOFF] Taking off...");
+        logInfoThrottled("[TAKEOFF] Taking off...", 1.0 );
       }
 
       break;
@@ -255,20 +258,20 @@ void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
       switch (getServerEvent())
       {
         case TAKEOFF_E:
-          ROS_INFO_NAMED(node_name_, "[LAND] UAV Attempting takeoff");
+          logInfo("[LAND] UAV Attempting takeoff");
           setServerState(ServerState::TAKEOFF);
           break;
         case LAND_E:
-          ROS_WARN_NAMED(node_name_, "[LAND] IGNORED EVENT. UAV already attempting landing");
+          logWarn("[LAND] IGNORED EVENT. UAV already attempting landing");
           break;
         case MISSION_E:
-          ROS_WARN_NAMED(node_name_, "[LAND] IGNORED EVENT. UAV is landing, it needs to take off before accepting mission command");
+          logWarn("[LAND] IGNORED EVENT. UAV is landing, it needs to take off before accepting mission command");
           break;
         case CANCEL_MISSION_E:
-          ROS_WARN_NAMED(node_name_, "[LAND] IGNORED EVENT. No mission to cancel");
+          logWarn("[LAND] IGNORED EVENT. No mission to cancel");
           break;
         case E_STOP_E:
-          ROS_FATAL_NAMED(node_name_, "[LAND] EMERGENCY STOP ACTIVATED!");
+          logFatal("[LAND] EMERGENCY STOP ACTIVATED!");
           setServerState(ServerState::E_STOP);
           break;
         case EMPTY_E:
@@ -277,11 +280,11 @@ void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
       }
 
       if (isLanded()){
-        ROS_INFO_NAMED(node_name_, "[LAND] Landing complete");
+        logInfo("[LAND] Landing complete");
         setServerState(ServerState::IDLE);
       }
       else {
-        ROS_INFO_THROTTLE_NAMED(1.0, node_name_, "[LAND] landing...");
+        logInfoThrottled("[LAND] landing...", 1.0);
       }
 
       setServerState(ServerState::IDLE);
@@ -292,21 +295,21 @@ void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
       switch (getServerEvent())
       {
         case TAKEOFF_E:
-          ROS_WARN_NAMED(node_name_, "[HOVER] IGNORED EVENT. UAV already took off. Currently in [HOVER] mode");
+          logWarn("[HOVER] IGNORED EVENT. UAV already took off. Currently in [HOVER] mode");
           break;
         case LAND_E:
-          ROS_INFO_NAMED(node_name_, "[HOVER] Attempting landing");
+          logInfo("[HOVER] Attempting landing");
           setServerState(ServerState::LAND);
           break;
         case MISSION_E:
-          ROS_INFO_NAMED(node_name_, "[HOVER] UAV entering [MISSION] mode.");
+          logInfo("[HOVER] UAV entering [MISSION] mode.");
           setServerState(ServerState::MISSION);
           break;
         case CANCEL_MISSION_E:
-          ROS_WARN_NAMED(node_name_, "[HOVER] IGNORED EVENT. No mission to cancel");
+          logWarn("[HOVER] IGNORED EVENT. No mission to cancel");
           break;
         case E_STOP_E:
-          ROS_FATAL_NAMED(node_name_, "[HOVER] EMERGENCY STOP ACTIVATED!");
+          logFatal("[HOVER] EMERGENCY STOP ACTIVATED!");
           setServerState(ServerState::E_STOP);
           break;
         case EMPTY_E:
@@ -321,21 +324,21 @@ void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
       switch (getServerEvent())
       {
         case TAKEOFF_E:
-          ROS_WARN_NAMED(node_name_, "[MISSION] IGNORED EVENT. UAV already took off. Currently in [MISSION] mode");
+          logWarn("[MISSION] IGNORED EVENT. UAV already took off. Currently in [MISSION] mode");
           break;
         case LAND_E:
-          ROS_WARN_NAMED(node_name_, "[MISSION] IGNORED EVENT. Please cancel mission first");
+          logWarn("[MISSION] IGNORED EVENT. Please cancel mission first");
           break;
         case MISSION_E:
-          ROS_WARN_NAMED(node_name_, "[MISSION] IGNORED EVENT. UAV already in [MISSION] mode");
+          logWarn("[MISSION] IGNORED EVENT. UAV already in [MISSION] mode");
           break;
         case CANCEL_MISSION_E:
-          ROS_WARN_NAMED(node_name_, "[MISSION] Mission cancelled!");
+          logWarn("[MISSION] Mission cancelled!");
           endMission();
           setServerState(ServerState::HOVER);
           break;
         case E_STOP_E:
-          ROS_FATAL_NAMED(node_name_, "[MISSION] EMERGENCY STOP ACTIVATED!");
+          logFatal("[MISSION] EMERGENCY STOP ACTIVATED!");
           setServerState(ServerState::E_STOP);
           break;
         case EMPTY_E:
@@ -344,12 +347,12 @@ void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
       }
 
       if (!isMissionComplete()){
-        ROS_INFO_THROTTLE_NAMED(1.0, node_name_, "[MISSION] executing mission...");
+        logInfoThrottled("[MISSION] executing mission...", 5.0);
       }
       break;
 
     case ServerState::E_STOP:
-      ROS_FATAL_THROTTLE_NAMED(0.5, node_name_, "[E_STOP] Currently in E STOP State, please reset the vehicle and trajectory server!");
+      logFatalThrottled("[E_STOP] Currently in E STOP State, please reset the vehicle and trajectory server!", 1.0);
       break;
 
   }
@@ -388,16 +391,9 @@ void TrajServer::execMission()
   /* no publishing before receive traj_ and have heartbeat */
   if (heartbeat_time_.toSec() <= 1e-5)
   {
-    // ROS_ERROR_ONCE("[traj_server] No heartbeat from the planner received");
+    logErrorThrottled("[traj_server] No heartbeat from the planner received", 1.0);
     return;
   }
-
-  // Moved up one level
-  // if (isPlannerHeartbeatTimeout()){
-  //   ROS_ERROR("[traj_server] Lost heartbeat from the planner, is he dead?");
-  //   publish_cmd(last_mission_pos_, Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), last_mission_yaw_, 0);
-  //   return;
-  // }
 
   ros::Time time_now = ros::Time::now();
   // Time elapsed since start of trajectory
@@ -434,11 +430,11 @@ void TrajServer::execMission()
   // IF time elapsed is longer then duration of trajectory, then nothing is done
   else if (t_cur >= traj_duration_) // Finished trajectory
   {
-    // ROS_WARN_NAMED(node_name_, "t_cur exceeds traj_duration! No commands to send");
+    // logWarn("t_cur exceeds traj_duration! No commands to send");
     endMission();
   }
   else {
-    ROS_WARN_NAMED(node_name_, "Invalid time!");
+    logWarn(string_format("Invalid time, current time is negative at %d!",t_cur));
   }
   
 }
@@ -525,14 +521,14 @@ bool TrajServer::toggle_offboard_mode(bool toggle)
         if (set_mode_client.call(set_mode_srv))
         {
           if (set_mode_srv.response.mode_sent){
-            ROS_INFO_NAMED(node_name_, "Setting %s mode successful", set_mode_val.c_str());
+            logInfo(string_format("Setting %s mode successful", set_mode_val.c_str()));
           }
           else {
-            ROS_INFO_NAMED(node_name_, "Setting %s mode failed", set_mode_val.c_str());
+            logInfo(string_format("Setting %s mode failed", set_mode_val.c_str()));
           }
         }
         else {
-          ROS_INFO_NAMED(node_name_, "Service call to PX4 set_mode_client failed");
+          logInfo("Service call to PX4 set_mode_client failed");
         }
 
         last_request_t = ros::Time::now();
@@ -541,14 +537,14 @@ bool TrajServer::toggle_offboard_mode(bool toggle)
       {
         if (arming_client.call(arm_cmd)){
           if (arm_cmd.response.success){
-            ROS_INFO_NAMED(node_name_, "Setting arm to %d successful", arm_val);
+            logInfo(string_format("Setting arm to %d successful", arm_val));
           }
           else {
-            ROS_INFO_NAMED(node_name_, "Setting arm to %d failed", arm_val);
+            logInfo(string_format("Setting arm to %d failed", arm_val));
           }
         }
         else {
-          ROS_INFO_NAMED(node_name_, "Service call to PX4 arming_client failed");
+          logInfo("Service call to PX4 arming_client failed");
         }
 
         last_request_t = ros::Time::now();
@@ -626,7 +622,7 @@ void TrajServer::publish_cmd(Vector3d p, Vector3d v, Vector3d a, Vector3d j, dou
   mavros_msgs::PositionTarget pos_cmd;
 
   pos_cmd.header.stamp = ros::Time::now();
-  pos_cmd.header.frame_id = "world";
+  pos_cmd.header.frame_id = origin_frame_;
   pos_cmd.coordinate_frame = mavros_msgs::PositionTarget::FRAME_LOCAL_NED;
   pos_cmd.type_mask = type_mask;
   // pos_cmd.type_mask = 1024; // Ignore Yaw
@@ -655,8 +651,8 @@ void TrajServer::publish_cmd(Vector3d p, Vector3d v, Vector3d a, Vector3d j, dou
 
 void TrajServer::setServerState(ServerState new_state)
 {
-  ROS_INFO_NAMED(node_name_, "Transitioning server state: %s -> %s", 
-    StateToString(getServerState()).c_str(), StateToString(new_state).c_str());
+  logInfo(string_format("Transitioning server state: %s -> %s", 
+    StateToString(getServerState()).c_str(), StateToString(new_state).c_str()));
 
   server_state_ = new_state;
 }
@@ -668,14 +664,14 @@ ServerState TrajServer::getServerState()
 
 void TrajServer::setServerEvent(ServerEvent event)
 {
-  ROS_INFO_NAMED(node_name_, "Set server event: %s", EventToString(event).c_str());
+  logInfo(string_format("Set server event: %s", EventToString(event).c_str()));
 
   server_event_ = event;
 }
 
 ServerEvent TrajServer::getServerEvent()
 {
-  // ROS_INFO_NAMED(node_name_, "Retrieved server event: %s", EventToString(server_event_).c_str());
+  // logInfo(string_format("Retrieved server event: %s", EventToString(server_event_).c_str()));
   ServerEvent event = server_event_;
   server_event_ = ServerEvent::EMPTY_E;
 

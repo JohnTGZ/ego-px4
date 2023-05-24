@@ -80,6 +80,9 @@
 
     <!-- Trajectory server -->
     <node pkg="ego_planner" name="drone_$(arg drone_id)_traj_server" type="traj_server_node" output="screen">
+        <param name="drone_id" value="$(arg drone_id)"/>
+        <param name="origin_frame" value="$(arg drone_id_ns)_origin"/>
+
         <!-- Subscribed Topics -->
         <remap from="~planning/trajectory" to="/drone_$(arg drone_id)_planning/trajectory"/>
         <remap from="/mavros/state" to="/$(arg drone_id_ns)/mavros/state"/>

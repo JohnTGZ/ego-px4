@@ -40,6 +40,17 @@ enum ServerEvent
   EMPTY_E,          // 5
 };
 
+template<typename ... Args>
+std::string string_format( const std::string& format, Args ... args )
+{
+    int size_s = std::snprintf( nullptr, 0, format.c_str(), args ... ) + 1; // Extra space for '\0'
+    if( size_s <= 0 ){ throw std::runtime_error( "Error during formatting." ); }
+    auto size = static_cast<size_t>( size_s );
+    std::unique_ptr<char[]> buf( new char[ size ] );
+    std::snprintf( buf.get(), size, format.c_str(), args ... );
+    return std::string( buf.get(), buf.get() + size - 1 ); // We don't want the '\0' inside
+}
+
 class TrajServer{
 public:
 
@@ -216,9 +227,10 @@ public:
   ServerState getServerState(); 
 
 private:
+  int drone_id_; // ID of drone being commanded by trajectory server instance
+  std::string origin_frame_; // frame that the drone originated from i.e. it's local pose is (0,0,0) w.r.t to this frame.
 
   /* Publishers, Subscribers and Timers */
-
   ros::Publisher pos_cmd_raw_pub_; // Publisher of commands for PX4 
   ros::Publisher pos_cmd_pub_; // Publisher of commands for PX4 
   
@@ -267,4 +279,39 @@ private:
   double landed_height_{0.05}; // We assume that the ground is even (z = 0)
   double take_off_landing_tol_{0.05};
 
+
+private:
+  void logInfo(const std::string& str){
+    ROS_INFO_NAMED(node_name_, "UAV_%i: %s", drone_id_, str.c_str());
+  }
+
+  void logWarn(const std::string& str){
+    ROS_WARN_NAMED(node_name_, "UAV_%i: %s", drone_id_, str.c_str());
+  }
+
+  void logError(const std::string& str){
+    ROS_WARN_NAMED(node_name_, "UAV_%i: %s", drone_id_, str.c_str());
+  }
+
+  void logFatal(const std::string& str){
+    ROS_FATAL_NAMED(node_name_, "UAV_%i: %s", drone_id_, str.c_str());
+  }
+
+  void logInfoThrottled(const std::string& str, double period){
+    ROS_INFO_THROTTLE_NAMED(period, node_name_, "UAV_%i: %s", drone_id_, str.c_str());
+  }
+
+  void logWarnThrottled(const std::string& str, double period){
+    ROS_WARN_THROTTLE_NAMED(period, node_name_, "UAV_%i: %s", drone_id_, str.c_str());
+  }
+
+  void logErrorThrottled(const std::string& str, double period){
+    ROS_ERROR_THROTTLE_NAMED(period, node_name_, "UAV_%i: %s", drone_id_, str.c_str());
+  }
+
+  void logFatalThrottled(const std::string& str, double period){
+    ROS_FATAL_THROTTLE_NAMED(period, node_name_, "UAV_%i: %s", drone_id_, str.c_str());
+  }
+
 };
+

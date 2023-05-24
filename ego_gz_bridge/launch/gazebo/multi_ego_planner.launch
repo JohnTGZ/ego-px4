@@ -11,6 +11,13 @@
   <arg name="point_cloud_topic" value="map" />
   <arg name="depth_img_topic" value="camera/depth/image_raw" />
 
+  <!-- swarm topic transmitter bridge-->
+  <!-- This bridge subscribes to and re-broadcasts the trajectories of all drones -->
+  <include file="$(find swarm_bridge)/launch/bridge_udp.launch">
+    <arg name="drone_id" value="999"/>
+    <arg name="broadcast_ip" value="127.0.0.255"/>
+  </include>
+
   <!-- Drone 0 -->
   <include file="$(find ego_gz_bridge)/launch/gazebo/single_ego_planner.launch">
     <arg name="drone_id"   value="0"/>
@@ -26,7 +33,7 @@
   </include>
 
   <!-- Drone 1 -->
-  <!-- <include file="$(find ego_gz_bridge)/launch/gazebo/single_ego_planner.launch">
+  <include file="$(find ego_gz_bridge)/launch/gazebo/single_ego_planner.launch">
     <arg name="drone_id"   value="1"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
@@ -37,6 +44,6 @@
     <arg name="depth_img_topic" value="$(arg depth_img_topic)"/>
     <arg name="point_cloud_topic" value="$(arg point_cloud_topic)"/>
     <arg name="command_topic" value="$(arg command_topic)" />
-  </include> -->
+  </include>
 
 </launch>

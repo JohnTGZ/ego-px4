@@ -416,7 +416,7 @@ void GridMap::updateOccupancyCallback(const ros::TimerEvent & /*event*/)
         md_.last_occ_update_time_.toSec(), 
         mp_.odom_depth_timeout_
         );
-      md_.flag_depth_odom_timeout_ = true; // This flag does nothing
+      md_.flag_depth_odom_timeout_ = true; // This flag when true causes the planner to perform an emergency stop
     }
     return;
   }
@@ -509,11 +509,11 @@ void GridMap::odomCallback(const nav_msgs::OdometryConstPtr &odom)
 void GridMap::poseCallback(const geometry_msgs::PoseStampedConstPtr &msg)
 {
 
-  if (msg->header.frame_id != "world" && msg->header.frame_id != "map")
-  {
-    ROS_ERROR("Camera global pose must be in the 'world' or 'map' frame. Assuming that world and map frame are at the same origin point and orientation");
-    return;
-  }
+  // if (msg->header.frame_id != "world" && msg->header.frame_id != "map")
+  // {
+  //   ROS_ERROR("Camera global pose must be in the 'world' or 'map' frame. Assuming that world and map frame are at the same origin point and orientation");
+  //   return;
+  // }
 
   if (transform_cam_pose_){
     // Transform camera frame to that of the uav

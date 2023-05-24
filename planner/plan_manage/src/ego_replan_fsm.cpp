@@ -32,7 +32,7 @@ namespace ego_planner
     nh.param("formation/num", formation_num, -1);
     if (formation_num < planner_manager_->pp_.drone_id + 1)
     {
-      ROS_ERROR("formation_num is smaller than the drone number, illegal!");
+      logError("formation_num is smaller than the drone number, illegal!");
       return;
     }
     std::vector<double> pos;
@@ -90,7 +90,7 @@ namespace ego_planner
     {
       trigger_sub_ = nh.subscribe("/traj_start_trigger", 1, &EGOReplanFSM::triggerCallback, this);
 
-      ROS_INFO("Wait for 2 second.");
+      logInfo("Wait for 2 second.");
       int count = 0;
       while (ros::ok() && count++ < 2000)
       {
@@ -98,7 +98,7 @@ namespace ego_planner
         ros::Duration(0.001).sleep();
       }
 
-      ROS_WARN("Waiting for odometry and trigger");
+      logWarn("Waiting for odometry and trigger");
 
       while (ros::ok() && (!have_odom_ || !have_trigger_))
       {
@@ -108,8 +108,9 @@ namespace ego_planner
 
       readGivenWpsAndPlan();
     }
-    else
-      cout << "Wrong target_type_ value! target_type_=" << target_type_ << endl;
+    else{
+      logError(string_format("Wrong target_type_ value! target_type_=%i", target_type_));
+    }
   }
 
   bool EGOReplanFSM::callEmergencyStop(Eigen::Vector3d stop_pos)
@@ -177,7 +178,7 @@ namespace ego_planner
           }
           else
           {
-            ROS_ERROR("Failed to generate the first trajectory!!!");
+            logError("Failed to generate the first trajectory!!!");
             changeFSMExecState(SEQUENTIAL_START, "FSM"); // "changeFSMExecState" must be called each time planned
           }
         }
@@ -312,7 +313,7 @@ namespace ego_planner
     {
       have_target_ = false;
       have_trigger_ = false;
-      ROS_ERROR("The goal is in obstacles, finish the planning.");
+      logError("The goal is in obstacles, finish the planning.");
       callEmergencyStop(odom_pos_);
 
       /* The navigation task completed */
@@ -349,7 +350,7 @@ namespace ego_planner
     /* ---------- check lost of depth ---------- */
     if (map->getOdomDepthTimeout())
     {
-      ROS_ERROR("Depth Lost! EMERGENCY_STOP");
+      logError("Depth Lost! EMERGENCY_STOP");
       enable_fail_safe_ = false;
       changeFSMExecState(EMERGENCY_STOP, "SAFETY");
     }
@@ -363,7 +364,7 @@ namespace ego_planner
 
     //   // if (!close_to_goal)
     //   // {
-    //   //   // ROS_INFO("current position is close to the safe segment end.");
+    //   //   // logInfo("current position is close to the safe segment end.");
     //   //   changeFSMExecState(REPLAN_TRAJ, "SAFETY");
     //   //   return;
     //   // }
@@ -376,7 +377,7 @@ namespace ego_planner
     //   //     {
     //   //       if ((odom_pos_ - end_pt_).norm() < no_replan_thresh_)
     //   //       {
-    //   //         ROS_ERROR("Dense obstacles close to the goal, stop planning.");
+    //   //         logError("Dense obstacles close to the goal, stop planning.");
     //   //         callEmergencyStop(odom_pos_);
     //   //         have_target_ = false;
     //   //         changeFSMExecState(WAIT_TARGET, "SAFETY");
@@ -401,7 +402,7 @@ namespace ego_planner
     size_t i_start = floor((id_ratio.first + id_ratio.second) * planner_manager_->getCpsNumPrePiece());
     if (i_start >= pts_chk.size())
     {
-      // ROS_ERROR("i_start >= pts_chk.size()");
+      // logError("i_start >= pts_chk.size()");
       return;
     }
     size_t j_start = 0;
@@ -445,7 +446,7 @@ namespace ego_planner
         Eigen::Vector3d p = pts_chk[i][j].second;
         // if ( (p - p_last).cwiseAbs().maxCoeff() > planner_manager_->grid_map_->getResolution() * 1.05 )
         // {
-        //   ROS_ERROR("BBBBBBBBBBBBBBBBBBBBBBBBBBB");
+        //   logError("BBBBBBBBBBBBBBBBBBBBBBBBBBB");
         //   cout << "p=" << p.transpose() << " p_last=" << p_last.transpose() << " dist=" << (p - p_last).cwiseAbs().maxCoeff() << endl;
         // }
         // p_last = p;
@@ -463,7 +464,7 @@ namespace ego_planner
 
         // if (occ)
         // {
-        //   ROS_WARN("AAAAAAAAAAAAAAAAAAA");
+        //   logWarn("AAAAAAAAAAAAAAAAAAA");
         //   cout << "pts_chk[i_start].size()=" << pts_chk[i_start].size() << endl;
         //   cout << "i=" << i << " j=" << j << " i_start=" << i_start << " j_start=" << j_start << endl;
         //   cout << "pts_chk.size()=" << pts_chk.size() << endl;
@@ -488,8 +489,8 @@ namespace ego_planner
 
             if (dist < CLEARANCE)
             {
-              ROS_WARN("swarm distance between drone %d and drone %d is %f, too close!",
-                       planner_manager_->pp_.drone_id, (int)id, dist);
+              logWarn(string_format("swarm distance between drone %d and drone %d is %f, too close!",
+                       planner_manager_->pp_.drone_id, (int)id, dist));
               occ = true;
               break;
             }
@@ -501,7 +502,7 @@ namespace ego_planner
           /* Handle the collided case immediately */
           if (planFromLocalTraj()) // Make a chance
           {
-            ROS_INFO("Plan success when detect collision. %f", t / info->duration);
+            logInfo(string_format("Plan success when detect collision. %f", t / info->duration));
             changeFSMExecState(EXEC_TRAJ, "SAFETY");
             return;
           }
@@ -509,12 +510,12 @@ namespace ego_planner
           {
             if (t - t_cur < emergency_time_) // 0.8s of emergency time
             {
-              ROS_WARN("Emergency stop! time=%f", t - t_cur);
+              logWarn(string_format("Emergency stop! time=%f", t - t_cur));
               changeFSMExecState(EMERGENCY_STOP, "SAFETY");
             }
             else
             {
-              ROS_WARN("current traj in collision, replan.");
+              logWarn("current traj in collision, replan.");
               changeFSMExecState(REPLAN_TRAJ, "SAFETY");
             }
             return;
@@ -532,7 +533,7 @@ namespace ego_planner
   void EGOReplanFSM::mandatoryStopCallback(const std_msgs::Empty &msg)
   {
     mandatory_stop_ = true;
-    ROS_ERROR("Received a mandatory stop command!");
+    logError("Received a mandatory stop command!");
     changeFSMExecState(EMERGENCY_STOP, "Mandatory Stop");
     enable_fail_safe_ = false;
   }
@@ -553,35 +554,36 @@ namespace ego_planner
   void EGOReplanFSM::triggerCallback(const geometry_msgs::PoseStampedPtr &msg)
   {
     have_trigger_ = true;
-    cout << "Triggered!" << endl;
+    logInfo("Execution of goals triggered!");
   }
 
   void EGOReplanFSM::RecvBroadcastMINCOTrajCallback(const traj_utils::MINCOTrajConstPtr &msg)
   {
     const size_t recv_id = (size_t)msg->drone_id;
-    if ((int)recv_id == planner_manager_->pp_.drone_id) // myself
+    if ((int)recv_id == planner_manager_->pp_.drone_id){ // Receiving the same plan produced by this very drone
       return;
+    }
 
     if (msg->drone_id < 0)
     {
-      ROS_ERROR("drone_id < 0 is not allowed in a swarm system!");
+      logError("drone_id < 0 is not allowed in a swarm system!");
       return;
     }
     if (msg->order != 5)
     {
-      ROS_ERROR("Only support trajectory order equals 5 now!");
+      logError("Only support trajectory order equals 5 now!");
       return;
     }
     if (msg->duration.size() != (msg->inner_x.size() + 1))
     {
-      ROS_ERROR("WRONG trajectory parameters.");
+      logError("Wrong trajectory parameters.");
       return;
     }
     if (planner_manager_->traj_.swarm_traj.size() > recv_id &&
         planner_manager_->traj_.swarm_traj[recv_id].drone_id == (int)recv_id &&
         msg->start_time.toSec() - planner_manager_->traj_.swarm_traj[recv_id].start_time <= 0)
     {
-      ROS_WARN("Received drone %d's trajectory out of order or duplicated, abandon it.", (int)recv_id);
+      logWarn(string_format("Received drone %d's trajectory out of order or duplicated, abandon it.", (int)recv_id));
       return;
     }
 
@@ -591,13 +593,13 @@ namespace ego_planner
 
       if (abs((t_now - msg->start_time).toSec()) < 10.0) // 10 seconds offset, more likely to be caused by unsynced system time.
       {
-        ROS_WARN("Time stamp diff: Local - Remote Agent %d = %fs",
-                 msg->drone_id, (t_now - msg->start_time).toSec());
+        logWarn(string_format("Time stamp diff: Local - Remote Agent %d = %fs",
+                 msg->drone_id, (t_now - msg->start_time).toSec()));
       }
       else
       {
-        ROS_ERROR("Time stamp diff: Local - Remote Agent %d = %fs, swarm time seems not synchronized, abandon!",
-                  msg->drone_id, (t_now - msg->start_time).toSec());
+        logError(string_format("Time stamp diff: Local - Remote Agent %d = %fs, swarm time seems not synchronized, abandon!",
+                  msg->drone_id, (t_now - msg->start_time).toSec()));
         return;
       }
     }
@@ -651,12 +653,21 @@ namespace ego_planner
     /* Check if receive agents have lower drone id */
     if (!have_recv_pre_agent_)
     {
+      logInfo(string_format("planner_manager_->traj_.swarm_traj.size() == %i. planner_manager_->pp_.drone_id == %i.", 
+        (int)planner_manager_->traj_.swarm_traj.size(), planner_manager_->pp_.drone_id));
+
+      // If the number of trajectories exceed or are same as current drone id
       if ((int)planner_manager_->traj_.swarm_traj.size() >= planner_manager_->pp_.drone_id)
       {
+        // For each drone id
         for (int i = 0; i < planner_manager_->pp_.drone_id; ++i)
         {
+          logInfo(string_format(" Current i [%i]", i));
+
+          // If the drone_id of the i-th swarm trajectory is not the same as the i-th value, then break out
           if (planner_manager_->traj_.swarm_traj[i].drone_id != i)
           {
+            logInfo(string_format("   planner_manager_->traj_.swarm_traj[%i].drone_id != [%i]", i, i));
             break;
           }
 
@@ -835,7 +846,7 @@ namespace ego_planner
   {
     if (waypoint_num_ <= 0)
     {
-      ROS_ERROR("Wrong waypoint_num_ = %d", waypoint_num_);
+      logError(string_format("Wrong waypoint_num_ = %d", waypoint_num_));
       return;
     }
 
@@ -859,7 +870,7 @@ namespace ego_planner
     
     if (!have_odom_)
     {
-      ROS_ERROR("Reject formation flight!");
+      logError("No odom received, rejecting formation flight!");
       return;
     }
 
@@ -883,47 +894,38 @@ namespace ego_planner
     static string state_str[8] = {"INIT", "WAIT_TARGET", "GEN_NEW_TRAJ", "REPLAN_TRAJ", "EXEC_TRAJ", "EMERGENCY_STOP", "SEQUENTIAL_START"};
     int pre_s = int(current_state_);
     current_state_ = new_state;
-    cout << "[" + pos_call + "]: from " + state_str[pre_s] + " to " + state_str[int(new_state)] << endl;
+
+    logInfo(string_format("[%s]: from %s to %s", 
+      pos_call.c_str(), state_str[pre_s].c_str(), state_str[int(new_state)].c_str()));
+
   }
 
   // display the FSM state along with other indicators (have_odom, have_target, have_trigger etc.)
   void EGOReplanFSM::printFSMExecState()
   {
     static string state_str[8] = {"INIT", "WAIT_TARGET", "GEN_NEW_TRAJ", "REPLAN_TRAJ", "EXEC_TRAJ", "EMERGENCY_STOP", "SEQUENTIAL_START"};
-    // static int last_printed_state = -1, dot_nums = 0;
 
-    // if (current_state_ != last_printed_state)
-    //   dot_nums = 0;
-    // else
-    //   dot_nums++;
+    std::string msg{""};
+    msg += string_format("[FSM]: state: %s", state_str[int(current_state_)].c_str());
 
-    cout << "\r[FSM]: state: " + state_str[int(current_state_)];
-
-    // last_printed_state = current_state_;
-
-    // some warnings
     if (!have_odom_)
     {
-      cout << ", waiting for odom";
+      msg += ", waiting for odom";
     }
     if (!have_target_)
     {
-      cout << ", waiting for target";
+      msg += ", waiting for target";
     }
     if (!have_trigger_)
     {
-      cout << ", waiting for trigger";
+      msg += ", waiting for trigger";
     }
     if (planner_manager_->pp_.drone_id >= 1 && !have_recv_pre_agent_)
     {
-      cout << ", haven't receive traj from previous drone";
+      msg += ", haven't receive traj from previous drone";
     }
 
-    cout << endl;
-
-    // cout << string(dot_nums, '.');
-
-    // fflush(stdout);
+    logInfo(msg);
   }
 
   std::pair<int, EGOReplanFSM::FSM_EXEC_STATE> EGOReplanFSM::timesOfConsecutiveStateCalls()

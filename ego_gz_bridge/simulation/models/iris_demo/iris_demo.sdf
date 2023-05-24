@@ -5,7 +5,7 @@
       <pose>0 0 0 0 0 0</pose>
       <inertial>
         <pose>0 0 0 0 0 0</pose>
-        <mass>1.5</mass>
+        <mass>1.0</mass>
         <inertia>
           <ixx>0.029125</ixx>
           <ixy>0</ixy>
@@ -19,7 +19,8 @@
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <box>
-            <size>0.47 0.47 0.11</size>
+            <!-- <size>0.47 0.47 0.11</size> -->
+            <size>0.21 0.21 0.11</size>
           </box>
         </geometry>
         <surface>
@@ -39,6 +40,7 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
+            <!-- <uri>model://iris_demo/meshes/pelican.dae</uri> -->
             <uri>model://iris/meshes/iris.stl</uri>
           </mesh>
         </geometry>
@@ -88,7 +90,7 @@
     </joint>
     
     <link name='rotor_0'>
-      <pose>0.13 -0.22 0.023 0 0 0</pose>
+      <pose>0.06 -0.06 0.023 0 0 0</pose>
       <inertial>
         <pose>0 0 0 0 0 0</pose>
         <mass>0.005</mass>
@@ -106,7 +108,7 @@
         <geometry>
           <cylinder>
             <length>0.005</length>
-            <radius>0.128</radius>
+            <radius>0.09</radius>
           </cylinder>
         </geometry>
         <surface>
@@ -122,7 +124,7 @@
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <mesh>
-            <scale>1 1 1</scale>
+            <scale>0.703125 0.703125 0.703125</scale>
             <uri>model://iris/meshes/iris_prop_ccw.dae</uri>
           </mesh>
         </geometry>
@@ -153,7 +155,7 @@
       </axis>
     </joint>
     <link name='rotor_1'>
-      <pose>-0.13 0.2 0.023 0 0 0</pose>
+      <pose>-0.06 0.06 0.023 0 0 0</pose>
       <inertial>
         <pose>0 0 0 0 0 0</pose>
         <mass>0.005</mass>
@@ -171,7 +173,7 @@
         <geometry>
           <cylinder>
             <length>0.005</length>
-            <radius>0.128</radius>
+            <radius>0.09</radius>
           </cylinder>
         </geometry>
         <surface>
@@ -187,7 +189,7 @@
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <mesh>
-            <scale>1 1 1</scale>
+            <scale>0.703125 0.703125 0.703125</scale>
             <uri>model://iris/meshes/iris_prop_ccw.dae</uri>
           </mesh>
         </geometry>
@@ -218,7 +220,7 @@
       </axis>
     </joint>
     <link name='rotor_2'>
-      <pose>0.13 0.22 0.023 0 0 0</pose>
+      <pose>0.06 0.06 0.023 0 0 0</pose>
       <inertial>
         <pose>0 0 0 0 0 0</pose>
         <mass>0.005</mass>
@@ -236,7 +238,7 @@
         <geometry>
           <cylinder>
             <length>0.005</length>
-            <radius>0.128</radius>
+            <radius>0.09</radius>
           </cylinder>
         </geometry>
         <surface>
@@ -252,7 +254,7 @@
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <mesh>
-            <scale>1 1 1</scale>
+            <scale>0.703125 0.703125 0.703125</scale>
             <uri>model://iris/meshes/iris_prop_cw.dae</uri>
           </mesh>
         </geometry>
@@ -283,7 +285,7 @@
       </axis>
     </joint>
     <link name='rotor_3'>
-      <pose>-0.13 -0.2 0.023 0 0 0</pose>
+      <pose>-0.06 -0.06 0.023 0 0 0</pose>
       <inertial>
         <pose>0 0 0 0 0 0</pose>
         <mass>0.005</mass>
@@ -301,7 +303,7 @@
         <geometry>
           <cylinder>
             <length>0.005</length>
-            <radius>0.128</radius>
+            <radius>0.09</radius>
           </cylinder>
         </geometry>
         <surface>
@@ -317,7 +319,7 @@
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <mesh>
-            <scale>1 1 1</scale>
+            <scale>0.703125 0.703125 0.703125</scale>
             <uri>model://iris/meshes/iris_prop_cw.dae</uri>
           </mesh>
         </geometry>
@@ -368,7 +370,7 @@
     </joint> -->
 
     <link name="camera_link">
-      <pose>0.1 0 0 0 0 0</pose>
+      <pose>0.06 0 0 0 0 0</pose>
       <inertial>
         <pose>0.01 0.025 0.025 0 0 0</pose>
         <mass>0.01</mass>
