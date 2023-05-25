@@ -2,6 +2,8 @@
 
 using namespace Eigen;
 
+/* Initialization methods */
+
 void TrajServer::init(ros::NodeHandle& nh)
 {
   logInfo("Initializing");
@@ -9,11 +11,15 @@ void TrajServer::init(ros::NodeHandle& nh)
   /* ROS Params*/
   nh.param("drone_id", drone_id_, 0);
   nh.param("origin_frame", origin_frame_, std::string("world"));
+  std::string drone_model_mesh_filepath;
+  nh.param("drone_model_mesh", drone_model_mesh_filepath, std::string(""));
 
+  nh.param("traj_server/takeoff_height", takeoff_height_, 1.0);
   nh.param("traj_server/time_forward", time_forward_, -1.0);
   nh.param("traj_server/pub_cmd_freq", pub_cmd_freq_, 25.0);
   nh.param("traj_server/state_machine_tick_freq", sm_tick_freq_, 50.0);
-  nh.param("traj_server/takeoff_height", takeoff_height_, 1.0);
+  double server_state_pub_freq;
+  nh.param("traj_server/server_state_pub_freq", server_state_pub_freq, 1.0);
 
   /* Subscribers */
   poly_traj_sub_ = nh.subscribe("planning/trajectory", 10, &TrajServer::polyTrajCallback, this);
@@ -25,7 +31,9 @@ void TrajServer::init(ros::NodeHandle& nh)
   set_server_state_sub_ = nh.subscribe<std_msgs::Int8>("/traj_server_event", 10, &TrajServer::serverEventCb, this);
 
   /* Publishers */
+  server_state_pub_ = nh.advertise<trajectory_server_msgs::State>("/server_state", 50);
   pos_cmd_raw_pub_ = nh.advertise<mavros_msgs::PositionTarget>("/mavros/setpoint_raw/local", 50);
+  uav_mesh_pub_ = nh.advertise<visualization_msgs::Marker>("model", 50);
 
   /* Service clients */
   arming_client = nh.serviceClient<mavros_msgs::CommandBool>("/mavros/cmd/arming");
@@ -34,6 +42,29 @@ void TrajServer::init(ros::NodeHandle& nh)
   /* Timer callbacks */
   exec_traj_timer_ = nh.createTimer(ros::Duration(1/pub_cmd_freq_), &TrajServer::execTrajTimerCb, this);
   tick_sm_timer_ = nh.createTimer(ros::Duration(1/sm_tick_freq_), &TrajServer::tickServerStateTimerCb, this);
+
+  state_pub_timer_ = nh.createTimer(ros::Duration(1/server_state_pub_freq), &TrajServer::pubServerStateTimerCb, this);
+
+  initModelMesh(drone_model_mesh_filepath);
+}
+
+void TrajServer::initModelMesh(const std::string& drone_model_mesh_filepath){
+
+  // input mesh model
+  model_mesh_.header.frame_id = origin_frame_;
+  model_mesh_.ns = "drone" + std::to_string(drone_id_);
+  model_mesh_.id = drone_id_;
+  model_mesh_.type = visualization_msgs::Marker::MESH_RESOURCE;
+  model_mesh_.action = visualization_msgs::Marker::ADD;
+
+  model_mesh_.scale.x = 0.4;
+  model_mesh_.scale.y = 0.4;
+  model_mesh_.scale.z = 0.4;
+  model_mesh_.color.a = 0.7;
+  model_mesh_.color.r = 0.5;
+  model_mesh_.color.g = 0.5;
+  model_mesh_.color.b = 0.5;
+  model_mesh_.mesh_resource = drone_model_mesh_filepath;
 }
 
 /* ROS Callbacks */
@@ -96,18 +127,11 @@ void TrajServer::UAVStateCb(const mavros_msgs::State::ConstPtr &msg)
 void TrajServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
   uav_pose_ = *msg;
-  // Convert quaternion to yaw
 
-  // tf::Quaternion q(
-  //   msg->pose.orientation.x,
-  //   msg->pose.orientation.y,
-  //   msg->pose.orientation.z,
-  //   msg->pose.orientation.w);
+	model_mesh_.pose = msg->pose;
+  model_mesh_.header.stamp = msg->header.stamp;
 
-  // tf::Matrix3x3 m(q);
-  // double roll, pitch, yaw;
-  // m.getRPY(roll, pitch, yaw);
-  // logInfo(string_format("RPY: (%.2f, %.2f, %.2f)", roll, pitch, yaw));
+	uav_mesh_pub_.publish(model_mesh_);
 }
 
 void TrajServer::serverEventCb(const std_msgs::Int8::ConstPtr & msg)
@@ -356,6 +380,10 @@ void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
       break;
 
   }
+}
+
+void TrajServer::pubServerStateTimerCb(const ros::TimerEvent &e){
+  publishServerState();
 }
 
 /* Trajectory execution methods */
@@ -647,6 +675,19 @@ void TrajServer::publish_cmd(Vector3d p, Vector3d v, Vector3d a, Vector3d j, dou
 
   last_mission_pos_ = p;
   last_mission_yaw_ = yaw;
+}
+
+void TrajServer::publishServerState(){
+  trajectory_server_msgs::State state_msg;
+
+  state_msg.drone_id = drone_id_;
+  state_msg.traj_server_state = StateToString(getServerState());
+  // TODO: Get FSM server state
+  state_msg.planner_server_state = "";
+  state_msg.uav_state = uav_current_state_.mode;
+  state_msg.armed = uav_current_state_.armed;
+
+  server_state_pub_.publish(state_msg);
 }
 
 void TrajServer::setServerState(ServerState new_state)

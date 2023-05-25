@@ -36,7 +36,7 @@ CMD_2="
 roslaunch ego_gz_bridge multi_ego_planner.launch
 "
 
-CMD_3="rostopic pub /traj_server_event std_msgs/Int8 \"data: 0 \" "
+CMD_3="rosrun ego_gz_bridge mission_startup.py"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 

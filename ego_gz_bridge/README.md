@@ -48,6 +48,8 @@ cd ~/raynor_ws/PX4-Autopilot
 bash ./Tools/setup/ubuntu.sh --no-nuttx
 # Make SITL target for Gazebo simulation
 DONT_RUN=1 make px4_sitl_default gazebo-classic
+cp -r ~/raynor_ws/src/ego-px4/ego_gz_bridge/simulation/models/raynor ~/raynor_ws/PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models/
+
 # If you screw up, clean up the build files in the repo:
 make distclean
 ```
@@ -79,20 +81,33 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
     - Size can be approximated as a cuboid: 0.21 * 0.21 * 0.12
 8. Offset the starting mavros local position of the drone by creating new frames and using those as the origin frame for each drone
 9. Fixed issues with simulating multiple robots in Gazebo Classic
+10. Add a visualization mesh to each drone (Similar to simple quad simulator's implementation)
+11. Use a new mesh (fake_drone.dae) model to represent the drone in gazebo
+12. Create script to takeoff and switch to mission mode.
+
+# Demo
+1. PX4 State control
+    - Demo takeoff, landing
+2. Multiple drones in Gazebo
+    - Demo with 2 drones
+    - Demo with 4 drones
 
 # Changes TODO
 ## Simulation
-- In Gazebo, we need a new mesh to visualize the robot (current one is simply scaled down from iris, and looks weird, perhaps we could use hummingbird model?)
+- Extend to 5 drones
+    - Seemingly, Issue with running 5 drones in gazebo is that it detects the drones and treats it as an obstacle: resulting in planning collision
+        - One solution would be to use the drone_detection module to remove the drone point cloud, assuming it works in simulation
 - In Trajectory server
-    - add a visualization mesh to each drone (Refer to simple quad simulator)
     - Be able to issue a set of waypoints via an action goal/message
-- Add a predefined set of actions to takeoff and switch to mission mode, then execute a set of waypoints, then land.
+    - Add script execute a set of waypoints, then land.
 - Look into gazebo plugins for quadrotor dynamics?
     - Promethus & px4_command and SE03 Simulator (within egoswarm v2 repo)
+- Set up a more complex simulation world
+- In Gazebo, we need a new mesh to visualize the robot (current one is simply scaled down from iris, and looks weird, perhaps we could use hummingbird model?)
 
 ## gridmap
-- Add body to camera transform as a matrix param
-- Take in intrinsic params of 
+- Add body to camera transform as a matrix ROS Param (Make sure that it is same as that in simulation)
+- Take in intrinsic params of camera via camera_info topic
 
 ## Trajectory Server
 - For trajectory server, read the current state of the mavros/state topic before determining the starting state machine state.

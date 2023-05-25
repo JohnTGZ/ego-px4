@@ -1,7 +1,9 @@
 #include <ros/ros.h>
+#include <tf/tf.h>
 
 #include <optimizer/poly_traj_utils.hpp>
 
+#include <geometry_msgs/PoseStamped.h>
 #include <mavros_msgs/PositionTarget.h>
 #include <mavros_msgs/CommandBool.h>
 #include <mavros_msgs/State.h>
@@ -9,11 +11,10 @@
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Empty.h>
 #include <std_msgs/Int8.h>
-#include <geometry_msgs/PoseStamped.h>
 #include <traj_utils/PolyTraj.h>
 #include <visualization_msgs/Marker.h>
 
-#include <tf/tf.h>
+#include <trajectory_server_msgs/State.h>
 
 using namespace Eigen;
 
@@ -54,7 +55,11 @@ std::string string_format( const std::string& format, Args ... args )
 class TrajServer{
 public:
 
+  /* Initialization methods */
+
   void init(ros::NodeHandle& nh);
+
+  void initModelMesh(const std::string& drone_model_mesh_filepath);
 
   /* ROS Callbacks */
 
@@ -88,6 +93,11 @@ public:
    * should be left to the execTrajTimerCb callback.
   */
   void tickServerStateTimerCb(const ros::TimerEvent &e);
+
+  /**
+   * Timer callback to publish server state
+  */
+  void pubServerStateTimerCb(const ros::TimerEvent &e);
 
   /* Trajectory execution methods */
 
@@ -226,13 +236,21 @@ public:
   /** get current server state */
   ServerState getServerState(); 
 
+  /**
+   * Publish the current servers' and UAV's state
+  */
+  void publishServerState();
+
 private:
   int drone_id_; // ID of drone being commanded by trajectory server instance
   std::string origin_frame_; // frame that the drone originated from i.e. it's local pose is (0,0,0) w.r.t to this frame.
+  visualization_msgs::Marker model_mesh_;
 
   /* Publishers, Subscribers and Timers */
   ros::Publisher pos_cmd_raw_pub_; // Publisher of commands for PX4 
-  ros::Publisher pos_cmd_pub_; // Publisher of commands for PX4 
+  ros::Publisher uav_mesh_pub_; // Publisher of model mesh visualisation
+
+  ros::Publisher server_state_pub_; // Publisher of current uav and servers' states
   
   ros::Subscriber poly_traj_sub_; // Subscriber for polynomial trajectory
   ros::Subscriber heartbeat_sub_; // Subscriber for heartbeat
@@ -243,6 +261,7 @@ private:
 
   ros::Timer exec_traj_timer_; // Timer to generate PVA commands for trajectory execution
   ros::Timer tick_sm_timer_; // Timer to tick the state machine 
+  ros::Timer state_pub_timer_; // Timer to publish server states
 
   /** @brief Service clients **/
   ros::ServiceClient arming_client, set_mode_client; 

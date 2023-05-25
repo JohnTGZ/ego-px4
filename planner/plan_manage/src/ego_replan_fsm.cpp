@@ -846,7 +846,7 @@ namespace ego_planner
   {
     if (waypoint_num_ <= 0)
     {
-      logError(string_format("Wrong waypoint_num_ = %d", waypoint_num_));
+      logError(string_format("waypoint_num_ is not a valid size! Value is %d", waypoint_num_));
       return;
     }
 

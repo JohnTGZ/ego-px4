@@ -1,8 +1,10 @@
 <launch>
   <!-- Gazebo parameters -->
   <arg name="world_name" default="$(find ego_gz_bridge)/simulation/worlds/ego_test.world"/>
+  <!-- Vehicle name used by PX4 configuration -->
   <arg name="vehicle" default="iris"/>
-  <arg name="model" default="iris_demo"/>
+  <!-- Actual model SDF to be spawned -->
+  <arg name="model" default="raynor"/> 
   
   <!-- Gazebo simulation -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
@@ -25,8 +27,8 @@
     <arg name="drone_id"   value="0"/>
     <arg name="vehicle" default="$(arg vehicle)"/>
     <arg name="model" default="$(arg model)"/>
-    <arg name="init_x"     value="-1.0"/>
-    <arg name="init_y"     value="0.0"/>
+    <arg name="init_x"     value="1.0"/>
+    <arg name="init_y"     value="-0.5"/>
     <arg name="init_z"     value="0.0"/>
   </include>
 
@@ -36,6 +38,26 @@
     <arg name="vehicle" default="$(arg vehicle)"/>
     <arg name="model" default="$(arg model)"/>
     <arg name="init_x"     value="1.0"/>
+    <arg name="init_y"     value="0.5"/>
+    <arg name="init_z"     value="0.0"/>
+  </include>
+
+  <!-- Drone 2 -->
+  <include file="$(find ego_gz_bridge)/launch/gazebo/gz_single_uav.launch">
+    <arg name="drone_id"   value="2"/>
+    <arg name="vehicle" default="$(arg vehicle)"/>
+    <arg name="model" default="$(arg model)"/>
+    <arg name="init_x"     value="0.0"/>
+    <arg name="init_y"     value="-1.0"/>
+    <arg name="init_z"     value="0.0"/>
+  </include>
+
+  <!-- Drone 3 -->
+  <include file="$(find ego_gz_bridge)/launch/gazebo/gz_single_uav.launch">
+    <arg name="drone_id"   value="3"/>
+    <arg name="vehicle" default="$(arg vehicle)"/>
+    <arg name="model" default="$(arg model)"/>
+    <arg name="init_x"     value="0.0"/>
     <arg name="init_y"     value="0.0"/>
     <arg name="init_z"     value="0.0"/>
   </include>

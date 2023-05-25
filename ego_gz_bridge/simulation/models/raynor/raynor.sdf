@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <sdf version='1.6'>
-  <model name='iris_demo'>
+  <model name='raynor'>
     <link name='base_link'>
       <pose>0 0 0 0 0 0</pose>
       <inertial>
@@ -39,9 +39,10 @@
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <mesh>
-            <scale>1 1 1</scale>
-            <!-- <uri>model://iris_demo/meshes/pelican.dae</uri> -->
-            <uri>model://iris/meshes/iris.stl</uri>
+            <!-- <scale>1 1 1</scale> -->
+            <scale>0.215 0.215 0.215</scale>
+            <uri>model://raynor/meshes/fake_drone.dae</uri>
+            <!-- <uri>model://raynor/meshes/iris.stl</uri> -->
           </mesh>
         </geometry>
         <material>
@@ -90,7 +91,7 @@
     </joint>
     
     <link name='rotor_0'>
-      <pose>0.06 -0.06 0.023 0 0 0</pose>
+      <pose>0.06 -0.06 0.0 0 0 0</pose>
       <inertial>
         <pose>0 0 0 0 0 0</pose>
         <mass>0.005</mass>
@@ -124,8 +125,9 @@
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <mesh>
-            <scale>0.703125 0.703125 0.703125</scale>
-            <uri>model://iris/meshes/iris_prop_ccw.dae</uri>
+            <!-- <scale>0.703125 0.703125 0.703125</scale> -->
+            <scale>0.04 0.04 0.04</scale>
+            <uri>model://raynor/meshes/propeller_ccw.dae</uri>
           </mesh>
         </geometry>
         <material>
@@ -155,7 +157,7 @@
       </axis>
     </joint>
     <link name='rotor_1'>
-      <pose>-0.06 0.06 0.023 0 0 0</pose>
+      <pose>-0.06 0.06 0.0 0 0 0</pose>
       <inertial>
         <pose>0 0 0 0 0 0</pose>
         <mass>0.005</mass>
@@ -189,8 +191,9 @@
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <mesh>
-            <scale>0.703125 0.703125 0.703125</scale>
-            <uri>model://iris/meshes/iris_prop_ccw.dae</uri>
+            <!-- <scale>0.703125 0.703125 0.703125</scale> -->
+            <scale>0.04 0.04 0.04</scale>
+            <uri>model://raynor/meshes/propeller_ccw.dae</uri>
           </mesh>
         </geometry>
         <material>
@@ -220,7 +223,7 @@
       </axis>
     </joint>
     <link name='rotor_2'>
-      <pose>0.06 0.06 0.023 0 0 0</pose>
+      <pose>0.06 0.06 0.0 0 0 0</pose>
       <inertial>
         <pose>0 0 0 0 0 0</pose>
         <mass>0.005</mass>
@@ -254,8 +257,9 @@
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <mesh>
-            <scale>0.703125 0.703125 0.703125</scale>
-            <uri>model://iris/meshes/iris_prop_cw.dae</uri>
+            <!-- <scale>0.703125 0.703125 0.703125</scale> -->
+            <scale>0.04 0.04 0.04</scale>
+            <uri>model://raynor/meshes/propeller_cw.dae</uri>
           </mesh>
         </geometry>
         <material>
@@ -285,7 +289,7 @@
       </axis>
     </joint>
     <link name='rotor_3'>
-      <pose>-0.06 -0.06 0.023 0 0 0</pose>
+      <pose>-0.06 -0.06 0.0 0 0 0</pose>
       <inertial>
         <pose>0 0 0 0 0 0</pose>
         <mass>0.005</mass>
@@ -319,8 +323,9 @@
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <mesh>
-            <scale>0.703125 0.703125 0.703125</scale>
-            <uri>model://iris/meshes/iris_prop_cw.dae</uri>
+            <!-- <scale>0.703125 0.703125 0.703125</scale> -->
+            <scale>0.04 0.04 0.04</scale>
+            <uri>model://raynor/meshes/propeller_cw.dae</uri>
           </mesh>
         </geometry>
         <material>
@@ -370,7 +375,7 @@
     </joint> -->
 
     <link name="camera_link">
-      <pose>0.06 0 0 0 0 0</pose>
+      <pose>0.08 0 0.02 0 0 0</pose>
       <inertial>
         <pose>0.01 0.025 0.025 0 0 0</pose>
         <mass>0.01</mass>
@@ -536,7 +541,7 @@
     <!-- GPS -->
     <include>
       <uri>model://gps</uri>
-      <pose>0.1 0 0 0 0 0</pose>
+      <pose>0 0 0.05 0 0 0</pose>
       <name>gps0</name>
     </include>
     <joint name='gps0_joint' type='fixed'>

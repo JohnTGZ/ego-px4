@@ -1,5 +1,5 @@
 <launch>
-  <arg name="num_drones" value="2"/>
+  <arg name="num_drones" value="4"/>
   <!-- size of map, change the size inflate x, y, z according to your application -->
   <arg name="map_size_x" value="80.0"/>
   <arg name="map_size_y" value="80.0"/>
@@ -35,6 +35,34 @@
   <!-- Drone 1 -->
   <include file="$(find ego_gz_bridge)/launch/gazebo/single_ego_planner.launch">
     <arg name="drone_id"   value="1"/>
+    <arg name="num_drones" value="$(arg num_drones)"/>
+    <arg name="map_size_x" value="$(arg map_size_x)"/>
+    <arg name="map_size_y" value="$(arg map_size_y)"/>
+    <arg name="map_size_z" value="$(arg map_size_z)"/>
+    <arg name="pose_topic" value="$(arg pose_topic)"/>
+    <arg name="odometry_topic" value="$(arg odometry_topic)"/>
+    <arg name="depth_img_topic" value="$(arg depth_img_topic)"/>
+    <arg name="point_cloud_topic" value="$(arg point_cloud_topic)"/>
+    <arg name="command_topic" value="$(arg command_topic)" />
+  </include>
+
+  <!-- Drone 2 -->
+  <include file="$(find ego_gz_bridge)/launch/gazebo/single_ego_planner.launch">
+    <arg name="drone_id"   value="2"/>
+    <arg name="num_drones" value="$(arg num_drones)"/>
+    <arg name="map_size_x" value="$(arg map_size_x)"/>
+    <arg name="map_size_y" value="$(arg map_size_y)"/>
+    <arg name="map_size_z" value="$(arg map_size_z)"/>
+    <arg name="pose_topic" value="$(arg pose_topic)"/>
+    <arg name="odometry_topic" value="$(arg odometry_topic)"/>
+    <arg name="depth_img_topic" value="$(arg depth_img_topic)"/>
+    <arg name="point_cloud_topic" value="$(arg point_cloud_topic)"/>
+    <arg name="command_topic" value="$(arg command_topic)" />
+  </include>
+
+  <!-- Drone 3 -->
+  <include file="$(find ego_gz_bridge)/launch/gazebo/single_ego_planner.launch">
+    <arg name="drone_id"   value="3"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
     <arg name="map_size_y" value="$(arg map_size_y)"/>
