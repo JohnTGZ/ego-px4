@@ -4,6 +4,9 @@
     <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
     <!-- Drone formation params -->
     <arg name="num_drones"/>
+    <arg name="init_x"/>
+    <arg name="init_y"/>
+    <arg name="init_z"/>
     <!-- Map params -->
     <arg name="map_size_x_"/>
     <arg name="map_size_y_"/>
@@ -32,7 +35,7 @@
     <arg name="use_distinctive_trajs"/>
     <!-- Goal definition  -->
     <arg name="flight_type"/>
-    <arg name="num_waypoints"/>
+
     <!-- <node pkg="ego_planner" name="ego_planner_node" type="ego_planner_node" output="screen" launch-prefix="valgrind"> -->
     <node pkg="ego_planner" name="drone_$(arg drone_id)_ego_planner_node" type="ego_planner_node" output="screen">
         <remap from="~mandatory_stop" to="/mandatory_stop_to_planner"/>
@@ -71,6 +74,11 @@
         <!-- //////////////////// -->
         <!-- EGOReplanFSM params -->
         <!-- //////////////////// -->
+        <!-- Transformation from world frame to UAV origin frame -->
+        <param name="fsm/frame_offset_x" value="$(arg init_x)" type="double"/>
+        <param name="fsm/frame_offset_y" value="$(arg init_y)" type="double"/>
+        <param name="fsm/frame_offset_z" value="$(arg init_z)" type="double"/>
+
         <!-- flight_type: 1 for manual publishing of goals, 2 for preset waypoints, as defined by fsm/waypointX param -->
         <param name="fsm/flight_type" value="$(arg flight_type)" type="int"/>
         <param name="fsm/thresh_replan_time" value="1.0" type="double"/>
@@ -80,10 +88,7 @@
         <param name="fsm/planning_horizon" value="$(arg planning_horizon)" type="double"/>
         <!-- emergency_time: always set to 1.5 times grater than sensing horizon-->
         <param name="fsm/emergency_time" value="1.0" type="double"/>
-        <!-- realworld_experiment: If set to true, then FSM will not automatically go on to execute trajectories -->
-        <param name="fsm/realworld_experiment" value="false"/>
         <param name="fsm/fail_safe" value="true"/>
-        <param name="fsm/waypoint_num" value="$(arg num_waypoints)" type="int"/>
 
         <!-- //////////////////// -->
         <!-- GridMap params -->

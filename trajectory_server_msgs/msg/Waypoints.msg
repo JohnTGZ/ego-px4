@@ -1,2 +1,1 @@
-int32 formation_id
 geometry_msgs/PoseArray waypoints

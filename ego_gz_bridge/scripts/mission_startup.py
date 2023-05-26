@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import rospy
-from mavros_msgs.msg import PositionTarget
 from trajectory_server_msgs.msg import State
 from std_msgs.msg import Int8
 
@@ -29,10 +28,9 @@ def publish_server_event(event_enum):
 def get_server_state_callback():
     msg = rospy.wait_for_message("/server_state", State, timeout=5.0)
     server_states[str(msg.drone_id)] = msg
-    print("==================")
-    # print(server_states[str(msg.drone_id)])
-    print(msg)
-    print("==================")
+    # print("==================")
+    # print(msg)
+    # print("==================")
 
 def main():
     rospy.init_node('mission_startup', anonymous=True)

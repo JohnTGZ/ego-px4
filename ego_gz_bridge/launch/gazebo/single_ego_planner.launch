@@ -3,11 +3,13 @@
     <arg name="drone_id"/>
     <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
     <arg name="num_drones"/>
+    <arg name="init_x"/>
+    <arg name="init_y"/>
+    <arg name="init_z"/>
     <!-- size of map, change the size inflate x, y, z according to your application -->
     <arg name="map_size_x"/>
     <arg name="map_size_y"/>
     <arg name="map_size_z"/>
-
     <!-- Input/output topics -->
     <arg name="command_topic"/>
     <arg name="odometry_topic"/>
@@ -21,6 +23,9 @@
     <include file="$(find ego_gz_bridge)/launch/advanced_param.xml">
         <arg name="drone_id" value="$(arg drone_id)"/>
         <arg name="num_drones" value="$(arg num_drones)" />
+        <arg name="init_x" value="$(arg init_x)"/>
+        <arg name="init_y" value="$(arg init_y)"/>
+        <arg name="init_z" value="$(arg init_z)"/>
 
         <arg name="map_size_x_" value="$(arg map_size_x)"/>
         <arg name="map_size_y_" value="$(arg map_size_y)"/>
@@ -75,9 +80,6 @@
         <!-- 2: use global waypoints below  -->
         <arg name="flight_type" value="1" />
 
-        <!-- global waypoints -->
-        <!-- It generates a piecewise min-snap traj passing all waypoints -->
-        <arg name="num_waypoints" value="0" />
     </include>
 
     <!-- Trajectory server -->

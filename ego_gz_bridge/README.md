@@ -97,10 +97,30 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 - In Trajectory server
     - Be able to issue a set of waypoints via an action goal/message
         - Cancel/Start/Pause execution
+        - Default behaviour
+            - Existing waypoints are cleared when new waypoints are issued.
         - Specify formations to execute waypoints
         - Check if every UAV in formation has finished execution of current waypoint before planning for the next one
         - Trajectory Server should trigger planner to start planning (Via a service call)
     - Add script execute a set of waypoints, then land.
+
+- 26/5/23
+    - Fix frame transformation issue
+        - Each UAV has their own origin frame relative to the world (Why? PX4 will always start from (0,0,0) in any given frame, so we create our own origin frame for each drone and provide an offset from world for said frame)
+            - No transformation needed
+                - Odom (already in UAV frame)
+                - Planned trajectory (not MINCO) (already in UAV frame)
+            - We need to transform to UAV origin frame for
+                - Received goals (In world frame)
+                - Other drone's MINCO trajectories (In world frame)
+            - Planner will plan in UAV origin frame 
+            - We need to transform to world frame
+                - Broadcasted Trajectories (In world frame)
+    - Add subscription of waypoints to ego replan FSM. Test out and see how it turns out
+    - Refactor wpt_id_
+    - Create script to update trajectory server. Update
+    - Try substituting with actual position
+
 - Extend to 5 drones
     - Seemingly, Issue with running 5 drones in gazebo is that it detects the drones and treats it as an obstacle: resulting in planning collision
         - One solution would be to use the drone_detection module to remove the drone point cloud, assuming it works in simulation

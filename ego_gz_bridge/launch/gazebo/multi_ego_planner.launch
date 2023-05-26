@@ -21,6 +21,9 @@
   <!-- Drone 0 -->
   <include file="$(find ego_gz_bridge)/launch/gazebo/single_ego_planner.launch">
     <arg name="drone_id"   value="0"/>
+    <arg name="init_x"     value="1.0"/>
+    <arg name="init_y"     value="-0.5"/>
+    <arg name="init_z"     value="0.0"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
     <arg name="map_size_y" value="$(arg map_size_y)"/>
@@ -35,6 +38,9 @@
   <!-- Drone 1 -->
   <include file="$(find ego_gz_bridge)/launch/gazebo/single_ego_planner.launch">
     <arg name="drone_id"   value="1"/>
+    <arg name="init_x"     value="1.0"/>
+    <arg name="init_y"     value="0.5"/>
+    <arg name="init_z"     value="0.0"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
     <arg name="map_size_y" value="$(arg map_size_y)"/>
@@ -47,8 +53,11 @@
   </include>
 
   <!-- Drone 2 -->
-  <include file="$(find ego_gz_bridge)/launch/gazebo/single_ego_planner.launch">
+  <!-- <include file="$(find ego_gz_bridge)/launch/gazebo/single_ego_planner.launch">
     <arg name="drone_id"   value="2"/>
+    <arg name="init_x"     value="0.0"/>
+    <arg name="init_y"     value="-1.0"/>
+    <arg name="init_z"     value="0.0"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
     <arg name="map_size_y" value="$(arg map_size_y)"/>
@@ -58,11 +67,14 @@
     <arg name="depth_img_topic" value="$(arg depth_img_topic)"/>
     <arg name="point_cloud_topic" value="$(arg point_cloud_topic)"/>
     <arg name="command_topic" value="$(arg command_topic)" />
-  </include>
+  </include> -->
 
   <!-- Drone 3 -->
-  <include file="$(find ego_gz_bridge)/launch/gazebo/single_ego_planner.launch">
+  <!-- <include file="$(find ego_gz_bridge)/launch/gazebo/single_ego_planner.launch">
     <arg name="drone_id"   value="3"/>
+    <arg name="init_x"     value="0.0"/>
+    <arg name="init_y"     value="0.0"/>
+    <arg name="init_z"     value="0.0"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
     <arg name="map_size_y" value="$(arg map_size_y)"/>
@@ -72,6 +84,6 @@
     <arg name="depth_img_topic" value="$(arg depth_img_topic)"/>
     <arg name="point_cloud_topic" value="$(arg point_cloud_topic)"/>
     <arg name="command_topic" value="$(arg command_topic)" />
-  </include>
+  </include> -->
 
 </launch>
