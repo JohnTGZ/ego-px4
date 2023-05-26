@@ -84,6 +84,17 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 10. Add a visualization mesh to each drone (Similar to simple quad simulator's implementation)
 11. Use a new mesh (fake_drone.dae) model to represent the drone in gazebo
 12. Create script to takeoff and switch to mission mode.
+13. Fix frame transformation issue
+    - Each UAV has their own origin frame relative to the world (Why? PX4 will always start from (0,0,0) in any given frame, so we create our own origin frame for each drone and provide an offset from world for said frame)
+        - No transformation needed
+            - Odom (already in UAV frame)
+            - Planned trajectory (not MINCO) (already in UAV frame)
+        - We need to transform to UAV origin frame for
+            - Received goals (In world frame)
+            - Other drone's MINCO trajectories (In world frame)
+        - Planner will plan in UAV origin frame 
+        - We need to transform to world frame
+            - Broadcasted Trajectories (In world frame)
 
 # Demo
 1. PX4 State control
@@ -93,6 +104,12 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
     - Demo with 4 drones
 
 # Changes TODO
+- 26/5/23
+    - Fix the target goals not being in the correct frame_id/position.
+    - Add subscription of waypoints to ego replan FSM. Test out and see how it turns out
+    - Refactor wpt_id_
+    - Try substituting with actual position
+
 ## Simulation
 - In Trajectory server
     - Be able to issue a set of waypoints via an action goal/message
@@ -104,22 +121,7 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
         - Trajectory Server should trigger planner to start planning (Via a service call)
     - Add script execute a set of waypoints, then land.
 
-- 26/5/23
-    - Fix frame transformation issue
-        - Each UAV has their own origin frame relative to the world (Why? PX4 will always start from (0,0,0) in any given frame, so we create our own origin frame for each drone and provide an offset from world for said frame)
-            - No transformation needed
-                - Odom (already in UAV frame)
-                - Planned trajectory (not MINCO) (already in UAV frame)
-            - We need to transform to UAV origin frame for
-                - Received goals (In world frame)
-                - Other drone's MINCO trajectories (In world frame)
-            - Planner will plan in UAV origin frame 
-            - We need to transform to world frame
-                - Broadcasted Trajectories (In world frame)
-    - Add subscription of waypoints to ego replan FSM. Test out and see how it turns out
-    - Refactor wpt_id_
-    - Create script to update trajectory server. Update
-    - Try substituting with actual position
+
 
 - Extend to 5 drones
     - Seemingly, Issue with running 5 drones in gazebo is that it detects the drones and treats it as an obstacle: resulting in planning collision
