@@ -47,19 +47,6 @@ namespace ego_planner
       nh.param("fsm/waypoint" + to_string(i) + "_x", waypoints_[i][0], -1.0);
       nh.param("fsm/waypoint" + to_string(i) + "_y", waypoints_[i][1], -1.0);
       nh.param("fsm/waypoint" + to_string(i) + "_z", waypoints_[i][2], -1.0);
-
-      // if ( i==0 )
-      // {
-      //   Eigen::Vector3d dir(waypoints_[0][0]-formation_start_(0), waypoints_[0][1]-formation_start_(1), waypoints_[0][2]-formation_start_(2));
-      //   dir.normalize();
-
-      // }
-      // else
-      // {
-      //   Eigen::Vector3d dir(waypoints_[i][0]-waypoints_[i-1][0], waypoints_[i][1]-waypoints_[i-1][1], waypoints_[i][2]-waypoints_[i-1][2]);
-      //   dir.normalize();
-
-      // }
     }
 
     /* callback */
@@ -254,7 +241,6 @@ namespace ego_planner
 
     data_disp_.header.stamp = ros::Time::now();
     data_disp_pub_.publish(data_disp_);
-
   }
 
   std::pair<bool,bool> EGOReplanFSM::isGoalReachedAndReplanNeeded(){
@@ -271,6 +257,9 @@ namespace ego_planner
 
     // Local target point and final goal is close enough
     bool touch_the_goal = ((local_target_pt_ - end_pt_).norm() < 1e-2);
+
+    //TODO remove target_type_ == TARGET_TYPE::PRESET_TARGET condition 
+    // so that there is no difference between manually provided goals and waypoints
 
     // SAME STATE: Plan next waypoint if:
     // 1. current waypoint id is not the last waypoint
@@ -331,6 +320,81 @@ namespace ego_planner
 
     return std::make_pair(goal_reached, replan_needed);
   }
+
+  // std::pair<bool,bool> EGOReplanFSM::isGoalReachedAndReplanNeeded(){
+  //   // boolean values to denote current state of plan execution
+  //   bool goal_reached{false}, replan_needed{false};
+
+  //   /* determine if need to replan */
+  //   LocalTrajData *info = &planner_manager_->traj_.local_traj;
+  //   double t_cur = ros::Time::now().toSec() - info->start_time;
+  //   t_cur = min(info->duration, t_cur);
+
+  //   // Get position at current time
+  //   Eigen::Vector3d pos = info->traj.getPos(t_cur);
+
+  //   // Local target point and final goal is close enough
+  //   bool touch_the_goal = ((local_target_pt_ - end_pt_).norm() < 1e-2);
+
+  //   // SAME STATE: Plan next waypoint if:
+  //   // 1. current waypoint id is not the last waypoint
+  //   // 2. distance between current pos and end point is below no_replan_thresh_ 
+  //   if ((target_type_ == TARGET_TYPE::PRESET_TARGET) &&
+  //       (wpt_id_ < waypoint_num_ - 1) &&
+  //       (end_pt_ - pos).norm() < no_replan_thresh_)
+  //   {
+  //     formation_start_ = wps_[wpt_id_];
+  //     wpt_id_++;
+  //     planNextWaypoint(wps_[wpt_id_], formation_start_);
+  //   }
+  //   // GOAL REACHED: local target close to the global target
+  //   else if ((t_cur > info->duration - 1e-2) && touch_the_goal) 
+  //   {
+  //     // Restart the target and trigger
+  //     have_target_ = false;
+
+  //     // TODO: Disabled trigger here
+  //     // have_trigger_ = false;
+
+  //     if (target_type_ == TARGET_TYPE::PRESET_TARGET)
+  //     {
+  //       // Plan from start of formation to first waypoint
+  //       formation_start_ = wps_[wpt_id_];
+  //       wpt_id_ = 0;
+  //       planNextWaypoint(wps_[wpt_id_], formation_start_);
+  //       // have_trigger_ = false; // must have trigger
+  //     }
+
+  //     /* The navigation task completed */
+  //     goal_reached = true;
+  //     replan_needed = false;
+  //   }
+  //   // GOAL REACHED if:
+  //   // 1. distance between current pos and end point is below no_replan_thresh_ 
+  //   // 2. Goal is inside obstacle 
+  //   else if ((end_pt_ - pos).norm() < no_replan_thresh_ &&
+  //             planner_manager_->grid_map_->getInflateOccupancy(end_pt_))
+  //   {
+  //     have_target_ = false;
+  //     have_trigger_ = false;
+  //     logError("The goal is in obstacles, finish the planning.");
+  //     callEmergencyStop(odom_pos_);
+
+  //     /* The navigation task completed */
+  //     goal_reached = true;
+  //     replan_needed = false;
+  //   }
+  //   // REPLAN: if current time elapsed exceeds replan time threshold
+  //   else if (t_cur > replan_thresh_ ||
+  //           (!touch_the_goal && planner_manager_->traj_.local_traj.pts_chk.back().back().first - t_cur < emergency_time_))
+  //   {
+  //     // Replan trajectory needed
+  //     goal_reached = false;
+  //     replan_needed = true;
+  //   }
+
+  //   return std::make_pair(goal_reached, replan_needed);
+  // }
 
   // Checks distance between drones in the swarm
   void EGOReplanFSM::checkCollisionCallback(const ros::TimerEvent &e)
@@ -838,7 +902,7 @@ namespace ego_planner
       // Set the formation_start to be second last waypoint 
       formation_start_ = wps_[wpt_id_ - 1];
     }
-    // Plan from second last waypoint to final waypoint
+    // Plan from formation_start_ to final waypoint
     planNextWaypoint(wps_[wpt_id_], formation_start_);
   }
 
@@ -876,6 +940,7 @@ namespace ego_planner
 
     // plan first global waypoint
     wpt_id_ = 0;
+    // Plan from formation_start_ to first waypoint
     planNextWaypoint(wps_[wpt_id_], formation_start_);
   }
 

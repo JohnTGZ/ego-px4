@@ -94,12 +94,16 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 
 # Changes TODO
 ## Simulation
+- In Trajectory server
+    - Be able to issue a set of waypoints via an action goal/message
+        - Cancel/Start/Pause execution
+        - Specify formations to execute waypoints
+        - Check if every UAV in formation has finished execution of current waypoint before planning for the next one
+        - Trajectory Server should trigger planner to start planning (Via a service call)
+    - Add script execute a set of waypoints, then land.
 - Extend to 5 drones
     - Seemingly, Issue with running 5 drones in gazebo is that it detects the drones and treats it as an obstacle: resulting in planning collision
         - One solution would be to use the drone_detection module to remove the drone point cloud, assuming it works in simulation
-- In Trajectory server
-    - Be able to issue a set of waypoints via an action goal/message
-    - Add script execute a set of waypoints, then land.
 - Look into gazebo plugins for quadrotor dynamics?
     - Promethus & px4_command and SE03 Simulator (within egoswarm v2 repo)
 - Set up a more complex simulation world
