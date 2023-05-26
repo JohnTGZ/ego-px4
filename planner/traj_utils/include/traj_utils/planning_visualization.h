@@ -16,6 +16,8 @@ namespace ego_planner
   class PlanningVisualization
   {
   private:
+    std::string origin_frame_;
+
     ros::NodeHandle node;
 
     ros::Publisher goal_point_pub;

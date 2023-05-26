@@ -1,7 +1,0 @@
-<launch>
-    <!-- trajectory server -->
-    <node pkg="ego_gz_bridge" name="ego_gz_bridge_node" type="ego_gz_bridge_node" output="screen"/>
-    <node pkg="ego_gz_bridge" name="cloud_repub_node" type="cloud_repub_node" output="screen"/>
-    
-    <node pkg="tf" type="static_transform_publisher" name="base_link_to_camera_link_tf" args="0.1 0 0 -1.57 0 -1.57 base_link camera_link 10" />
-</launch>

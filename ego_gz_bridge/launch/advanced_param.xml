@@ -1,40 +1,38 @@
 <launch>
+    <!-- Drone id -->
+    <arg name="drone_id"/>
+    <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+    <!-- Drone formation params -->
+    <arg name="num_drones"/>
+    <!-- Map params -->
     <arg name="map_size_x_"/>
     <arg name="map_size_y_"/>
     <arg name="map_size_z_"/>
+    <arg name="obj_num_set"/>
+    <!-- Sensor input type -->
+    <arg name="POSE_TYPE"/>
+    <arg name="SENSOR_TYPE"/>
+    <arg name="gridmap_frame_id" default="world"/>
+    <!-- Subscribed topics -->
     <arg name="odometry_topic"/>
-    <arg name="camera_pose_topic"/>
+    <arg name="pose_topic"/>
     <arg name="depth_topic"/>
     <arg name="cloud_topic"/>
+    <!-- Camera params -->
+    <arg name="transform_camera_pose"/>
     <arg name="cx"/>
     <arg name="cy"/>
     <arg name="fx"/>
     <arg name="fy"/>
+    <!-- Planner params -->
     <arg name="max_vel"/>
     <arg name="max_acc"/>
     <arg name="max_jer"/>
     <arg name="planning_horizon"/>
-    <arg name="point_num"/>
-    <arg name="point0_x"/>
-    <arg name="point0_y"/>
-    <arg name="point0_z"/>
-    <arg name="point1_x"/>
-    <arg name="point1_y"/>
-    <arg name="point1_z"/>
-    <arg name="point2_x"/>
-    <arg name="point2_y"/>
-    <arg name="point2_z"/>
-    <arg name="point3_x"/>
-    <arg name="point3_y"/>
-    <arg name="point3_z"/>
-    <arg name="point4_x"/>
-    <arg name="point4_y"/>
-    <arg name="point4_z"/>
-    <arg name="flight_type"/>
     <arg name="use_distinctive_trajs"/>
-    <arg name="obj_num_set"/>
-    <arg name="drone_id"/>
-    <!-- main node -->
+    <!-- Goal definition  -->
+    <arg name="flight_type"/>
+    <arg name="num_waypoints"/>
     <!-- <node pkg="ego_planner" name="ego_planner_node" type="ego_planner_node" output="screen" launch-prefix="valgrind"> -->
     <node pkg="ego_planner" name="drone_$(arg drone_id)_ego_planner_node" type="ego_planner_node" output="screen">
         <remap from="~mandatory_stop" to="/mandatory_stop_to_planner"/>
@@ -52,53 +50,40 @@
             1 ("grid_map/pose") or 
             2 ("grid_map/odom") 
             for use as camera pose/odom-->
-        <param name="~grid_map/pose_type" value="1"/>
+        <param name="~grid_map/pose_type" value="$(arg POSE_TYPE)"/>
         <remap from="~grid_map/odom" to="$(arg odometry_topic)"/>
-        <remap from="~grid_map/pose" to = "$(arg camera_pose_topic)"/>
+        <remap from="~grid_map/pose" to = "$(arg pose_topic)"/>
 
-        <!-- grid_map/pose_type: Toggle between subscription to
+        <!-- grid_map/sensor_type: Toggle between subscription to
             1 ("grid_map/cloud") or 
             2 ("grid_map/depth") 
             for use as camera sensor input -->
-        <param name="~grid_map/sensor_type" value="1"/>
+        <param name="~grid_map/sensor_type" value="$(arg SENSOR_TYPE)"/>
         <remap from="~grid_map/cloud" to="$(arg cloud_topic)"/>
         <remap from="~grid_map/depth" to = "$(arg depth_topic)"/>
 
+        <!-- If true, camera pose is transformed using a pre-defined translation/rotation matrix -->
+        <remap from="~grid_map/transform_camera_pose" to = "$(arg transform_camera_pose)"/>
+
         <!-- Frame ID to use for publishing (NOT for the input sensor data) -->
-        <param name="grid_map/frame_id" value="world"/>
+        <param name="grid_map/frame_id" value="$(arg gridmap_frame_id)"/>
 
         <!-- //////////////////// -->
         <!-- EGOReplanFSM params -->
         <!-- //////////////////// -->
         <!-- flight_type: 1 for manual publishing of goals, 2 for preset waypoints, as defined by fsm/waypointX param -->
         <param name="fsm/flight_type" value="$(arg flight_type)" type="int"/>
-
         <param name="fsm/thresh_replan_time" value="1.0" type="double"/>
         <!-- thresh_no_replan_meter: Replan only if current position and local target exceeds this parameter -->
         <param name="fsm/thresh_no_replan_meter" value="1.0" type="double"/>
         <!-- planning_horizon: Distance to plan for local target -->
         <param name="fsm/planning_horizon" value="$(arg planning_horizon)" type="double"/>
-        <!--always set to 1.5 times grater than sensing horizen-->
+        <!-- emergency_time: always set to 1.5 times grater than sensing horizon-->
         <param name="fsm/emergency_time" value="1.0" type="double"/>
         <!-- realworld_experiment: If set to true, then FSM will not automatically go on to execute trajectories -->
         <param name="fsm/realworld_experiment" value="false"/>
         <param name="fsm/fail_safe" value="true"/>
-        <param name="fsm/waypoint_num" value="$(arg point_num)" type="int"/>
-        <param name="fsm/waypoint0_x" value="$(arg point0_x)" type="double"/>
-        <param name="fsm/waypoint0_y" value="$(arg point0_y)" type="double"/>
-        <param name="fsm/waypoint0_z" value="$(arg point0_z)" type="double"/>
-        <param name="fsm/waypoint1_x" value="$(arg point1_x)" type="double"/>
-        <param name="fsm/waypoint1_y" value="$(arg point1_y)" type="double"/>
-        <param name="fsm/waypoint1_z" value="$(arg point1_z)" type="double"/>
-        <param name="fsm/waypoint2_x" value="$(arg point2_x)" type="double"/>
-        <param name="fsm/waypoint2_y" value="$(arg point2_y)" type="double"/>
-        <param name="fsm/waypoint2_z" value="$(arg point2_z)" type="double"/>
-        <param name="fsm/waypoint3_x" value="$(arg point3_x)" type="double"/>
-        <param name="fsm/waypoint3_y" value="$(arg point3_y)" type="double"/>
-        <param name="fsm/waypoint3_z" value="$(arg point3_z)" type="double"/>
-        <param name="fsm/waypoint4_x" value="$(arg point4_x)" type="double"/>
-        <param name="fsm/waypoint4_y" value="$(arg point4_y)" type="double"/>
-        <param name="fsm/waypoint4_z" value="$(arg point4_z)" type="double"/>
+        <param name="fsm/waypoint_num" value="$(arg num_waypoints)" type="int"/>
 
         <!-- //////////////////// -->
         <!-- GridMap params -->
@@ -112,7 +97,7 @@
         <param name="grid_map/local_update_range_z" value="4.5" />
         <param name="grid_map/obstacles_inflation" value="0.0" />
         <param name="grid_map/local_map_margin" value="10"/>
-        <param name="grid_map/ground_height" value="-0.1"/>
+        <param name="grid_map/ground_height" value="-0.25"/>
         <!-- camera parameter -->
         <param name="grid_map/cx" value="$(arg cx)"/>
         <param name="grid_map/cy" value="$(arg cy)"/>
@@ -136,7 +121,6 @@
         <param name="grid_map/max_ray_length" value="4.5"/>
         <param name="grid_map/visualization_truncate_height" value="4.0"/>
         <param name="grid_map/show_occ_time" value="false"/>
-
         <!-- planner manager -->
         <param name="manager/max_vel" value="$(arg max_vel)" type="double"/>
         <param name="manager/max_acc" value="$(arg max_acc)" type="double"/>
@@ -161,10 +145,10 @@
         <param name="optimization/max_acc" value="$(arg max_acc)" type="double"/>
         <param name="optimization/max_jer" value="$(arg max_jer)" type="double"/>
         <param name="optimization/record_opt" value="true"/>
-        <!-- formation-->
-        <param name="formation/num" value="7"/>
+        <!-- formation: Affects the target position of the drone relative to the goal-->
+        <param name="formation/num" value="$(arg num_drones)"/>
         <rosparam param="formation/start">[-32,0,1]</rosparam>
-        <rosparam param="formation/drone0">[  0, 0, 0]</rosparam>
+        <rosparam param="formation/drone0">[  1, -0.5, 0]</rosparam>
         <rosparam param="formation/drone1">[  1,  0.5, 0]</rosparam>
         <rosparam param="formation/drone2">[  0, -1.0, 0]</rosparam>
         <rosparam param="formation/drone3">[  0,  0.0, 0]</rosparam>

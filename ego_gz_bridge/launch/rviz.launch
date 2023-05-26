@@ -1,3 +1,5 @@
 <launch>
-  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find ego_gz_bridge)/launch/default.rviz" required="true" />
+  <arg name="config" default="default"/>
+
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find ego_gz_bridge)/launch/rviz/$(arg config).rviz" required="true" />
 </launch>

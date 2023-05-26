@@ -51,13 +51,14 @@ struct MappingParameters
 
   /* map properties */
   Eigen::Vector3d map_origin_, map_size_;
-  Eigen::Vector3d map_min_boundary_, map_max_boundary_; // map range in pos
+  Eigen::Vector3d map_min_boundary_, map_max_boundary_; // map range in metric position
   Eigen::Vector3i map_voxel_num_;                       // map range in index
-  Eigen::Vector3d local_update_range_;
-  double resolution_, resolution_inv_;
+  Eigen::Vector3d local_update_range_;                  // Range w.r.t camera pose 
+  double resolution_, resolution_inv_;                  
   double obstacles_inflation_;
   string frame_id_;
   int pose_type_;
+  int sensor_type_;
 
   /* camera parameters */
   double cx_, cy_, fx_, fy_;
@@ -101,8 +102,13 @@ struct MappingData
 
   // camera position and pose data
 
-  Eigen::Vector3d camera_pos_, last_camera_pos_;
-  Eigen::Matrix3d camera_r_m_, last_camera_r_m_;
+  // Eigen::Vector3d camera_pos_, last_camera_pos_;
+  // Eigen::Matrix3d camera_r_m_, last_camera_r_m_;
+  Eigen::Vector3d camera_pos_{0.0, 0.0, 0.0}, last_camera_pos_{0.0, 0.0, 0.0};
+  Eigen::Matrix3d camera_r_m_;
+  Eigen::Matrix3d last_camera_r_m_;
+
+  // Transformation of camera to body frame
   Eigen::Matrix4d cam2body_;
 
   // depth image data
@@ -112,7 +118,8 @@ struct MappingData
 
   // flags of map state
 
-  bool occ_need_update_, local_updated_;
+  bool occ_need_update_; //Indicates if occupancy map needs to be updated. Typically set to true after receiving new sensor data (e.g. depth image, point cloud pose, odom). 
+  bool local_updated_; // Indicates if map has already updated the local cache of occupancy grid, so that inflation can be performed
   bool has_first_depth_;
   bool has_odom_, has_cloud_;
 
@@ -121,10 +128,10 @@ struct MappingData
   bool flag_depth_odom_timeout_;
   bool flag_use_depth_fusion;
 
-  // depth image projected point cloud
-
-  vector<Eigen::Vector3d> proj_points_;
-  int proj_points_cnt;
+  bool init_depth_img_{false}; // First depth image received
+  
+  vector<Eigen::Vector3d> proj_points_; // depth image projected point cloud
+  int proj_points_cnt; // Number of pixels from input depth map that have been projected
 
   // flag buffers for speeding up raycasting
 
@@ -134,7 +141,6 @@ struct MappingData
   queue<Eigen::Vector3i> cache_voxel_;
 
   // range of updating grid
-
   Eigen::Vector3i local_bound_min_, local_bound_max_;
 
   // computation time
@@ -158,14 +164,28 @@ public:
     INVALID_IDX = -10000
   };
 
+
+  enum SensorType
+  {
+    SENSOR_CLOUD = 1,
+    SENSOR_DEPTH = 2,
+  };
+
   // occupancy map management
   void resetBuffer();
   void resetBuffer(Eigen::Vector3d min, Eigen::Vector3d max);
 
+  // Convert absolute position to 3d map index
   inline void posToIndex(const Eigen::Vector3d &pos, Eigen::Vector3i &id);
+
+  // Convert 3d map index to position
   inline void indexToPos(const Eigen::Vector3i &id, Eigen::Vector3d &pos);
+
+  // Convert from 3d index to 1d index
   inline int toAddress(const Eigen::Vector3i &id);
+  // Convert from 3d index (x,y,z) to 1d index
   inline int toAddress(int &x, int &y, int &z);
+
   inline bool isInMap(const Eigen::Vector3d &pos);
   inline bool isInMap(const Eigen::Vector3i &idx);
 
@@ -176,26 +196,41 @@ public:
   inline int getInflateOccupancy(Eigen::Vector3d pos);
   inline int getLessInflateOccupancy(Eigen::Vector3d pos);
 
+  // Bound the index to the map range
   inline void boundIndex(Eigen::Vector3i &id);
   inline bool isUnknown(const Eigen::Vector3i &id);
   inline bool isUnknown(const Eigen::Vector3d &pos);
   inline bool isKnownFree(const Eigen::Vector3i &id);
   inline bool isKnownOccupied(const Eigen::Vector3i &id);
 
+  // Initialize the GridMap class and it's callbacks
   void initMap(ros::NodeHandle &nh);
+
+  /** Helper methods */
+  
+  bool hasDepthObservation();
+  bool odomValid();
+
+  // Get map origin and size
+  void getRegion(Eigen::Vector3d &ori, Eigen::Vector3d &size);
+  
+  // Get map origin resolution
+  inline double getResolution();
+
+  // Get map origin
+  Eigen::Vector3d getOrigin();
+
+  // Get total size of voxels in the map
+  int getVoxelNum() {
+    return mp_.map_voxel_num_[0] * mp_.map_voxel_num_[1] * mp_.map_voxel_num_[2];
+  }
+
+  bool getOdomDepthTimeout() { return md_.flag_depth_odom_timeout_; }
+
+  /** Publisher methods */
 
   void publishMap();
   void publishMapInflate(bool all_info = false);
-
-  void publishDepth();
-
-  bool hasDepthObservation();
-  bool odomValid();
-  void getRegion(Eigen::Vector3d &ori, Eigen::Vector3d &size);
-  inline double getResolution();
-  Eigen::Vector3d getOrigin();
-  int getVoxelNum();
-  bool getOdomDepthTimeout() { return md_.flag_depth_odom_timeout_; }
 
   typedef std::shared_ptr<GridMap> Ptr;
 
@@ -205,12 +240,29 @@ private:
   MappingParameters mp_;
   MappingData md_;
 
+  // If true, camera pose is transformed using a pre-defined translation/rotation matrix
+  bool transform_cam_pose_{true};
+
+  std::string node_name_;
+
+  /**
+   * Callbacks
+  */
+
   // get depth image and camera pose
   void depthPoseCallback(const sensor_msgs::ImageConstPtr &img,
                          const geometry_msgs::PoseStampedConstPtr &pose);
+
+  // VINS estimation callback
   void extrinsicCallback(const nav_msgs::OdometryConstPtr &odom);
+
+  // Callback to image and odometry of camera
   void depthOdomCallback(const sensor_msgs::ImageConstPtr &img, const nav_msgs::OdometryConstPtr &odom);
+
+  // Callback to point cloud  
   void cloudCallback(const sensor_msgs::PointCloud2ConstPtr &img);
+  
+  // Callback to camera odom
   void odomCallback(const nav_msgs::OdometryConstPtr &odom);
 
   // update occupancy by raycasting
@@ -227,6 +279,10 @@ private:
   int setCacheOccupancy(Eigen::Vector3d pos, int occ);
   Eigen::Vector3d closetPointInMap(const Eigen::Vector3d &pt, const Eigen::Vector3d &camera_pt);
 
+  // Subscriptions to camera global pose and depth image
+  void poseCallback(const geometry_msgs::PoseStampedConstPtr &msg);
+  void depthImgCallback(const sensor_msgs::ImageConstPtr &img);
+
   // typedef message_filters::sync_policies::ExactTime<sensor_msgs::Image,
   // nav_msgs::Odometry> SyncPolicyImageOdom; typedef
   // message_filters::sync_policies::ExactTime<sensor_msgs::Image,
@@ -239,20 +295,23 @@ private:
   typedef shared_ptr<message_filters::Synchronizer<SyncPolicyImageOdom>> SynchronizerImageOdom;
 
   ros::NodeHandle node_;
-  shared_ptr<message_filters::Subscriber<sensor_msgs::Image>> depth_sub_;
-  shared_ptr<message_filters::Subscriber<geometry_msgs::PoseStamped>> pose_sub_;
-  shared_ptr<message_filters::Subscriber<nav_msgs::Odometry>> odom_sub_;
-  SynchronizerImagePose sync_image_pose_;
-  SynchronizerImageOdom sync_image_odom_;
+  // shared_ptr<message_filters::Subscriber<sensor_msgs::Image>> depth_sub_;
+  // shared_ptr<message_filters::Subscriber<geometry_msgs::PoseStamped>> pose_sub_;
+  // shared_ptr<message_filters::Subscriber<nav_msgs::Odometry>> odom_sub_;
+  // SynchronizerImagePose sync_image_pose_;
+  // SynchronizerImageOdom sync_image_odom_;
 
-  ros::Subscriber indep_cloud_sub_, indep_odom_sub_, extrinsic_sub_;
+  ros::Subscriber cloud_sub_, depth_sub_;
+  ros::Subscriber odom_sub_, pose_sub_;
+
+  ros::Subscriber extrinsic_sub_;
+
   ros::Publisher map_pub_, map_inf_pub_;
   ros::Timer occ_timer_, vis_timer_, fading_timer_;
 
-  //
-  uniform_real_distribution<double> rand_noise_;
-  normal_distribution<double> rand_noise2_;
-  default_random_engine eng_;
+  // uniform_real_distribution<double> rand_noise_;
+  // normal_distribution<double> rand_noise2_;
+  // default_random_engine eng_;
 };
 
 /* ============================== definition of inline function
@@ -387,6 +446,7 @@ inline int GridMap::getOccupancy(Eigen::Vector3i id)
   return md_.occupancy_buffer_[toAddress(id)] > mp_.min_occupancy_log_ ? 1 : 0;
 }
 
+// Checks if the position of the camera is currently within the map boundaries
 inline bool GridMap::isInMap(const Eigen::Vector3d &pos)
 {
   if (pos(0) < mp_.map_min_boundary_(0) + 1e-4 || pos(1) < mp_.map_min_boundary_(1) + 1e-4 ||
@@ -419,8 +479,9 @@ inline bool GridMap::isInMap(const Eigen::Vector3i &idx)
 
 inline void GridMap::posToIndex(const Eigen::Vector3d &pos, Eigen::Vector3i &id)
 {
-  for (int i = 0; i < 3; ++i)
+  for (int i = 0; i < 3; ++i){
     id(i) = floor((pos(i) - mp_.map_origin_(i)) * mp_.resolution_inv_);
+  }
 }
 
 inline void GridMap::indexToPos(const Eigen::Vector3i &id, Eigen::Vector3d &pos)

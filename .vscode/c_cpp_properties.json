@@ -1,0 +1,35 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/john/reynor_ws/devel/include/**",
+        "/opt/ros/noetic/include/**",
+        "/home/john/reynor_ws/src/ego-px4/planner/drone_detect/include/**",
+        "/home/john/reynor_ws/src/ego-px4/ego_gz_bridge/include/**",
+        "/home/john/reynor_ws/src/ego-px4/planner/plan_manage/include/**",
+        "/home/john/reynor_ws/src/ego-px4/uav_simulator/mockamap/include/**",
+        "/home/john/reynor_ws/src/ego-px4/planner/path_searching/include/**",
+        "/home/john/reynor_ws/src/ego-px4/planner/plan_env/include/**",
+        "/home/john/reynor_ws/src/ego-px4/Utils/pose_utils/include/**",
+        "/home/john/reynor_ws/src/ego-px4/Utils/quadrotor_msgs/include/**",
+        "/home/john/reynor_ws/src/ego-px4/uav_simulator/so3_control/include/**",
+        "/home/john/reynor_ws/src/ego-px4/uav_simulator/so3_quadrotor_simulator/include/**",
+        "/home/john/reynor_ws/src/ego-px4/planner/swarm_bridge/include/**",
+        "/home/john/reynor_ws/src/ego-px4/planner/traj_opt/include/**",
+        "/home/john/reynor_ws/src/ego-px4/planner/traj_utils/include/**",
+        "/home/john/reynor_ws/src/ego-px4/Utils/uav_utils/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}
