@@ -25,7 +25,7 @@ export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$EGO_GZ_BRIDGE_DIR:$PX4_AUTOPILOT_REPO
 # Commands
 #####
 CMD_0="
-roslaunch ego_gz_bridge gz_multi_uav.launch world_name:=$SCRIPT_DIR/../simulation/worlds/ego_test.world
+roslaunch ego_gz_bridge gz_multi_uav.launch 
 "
 
 CMD_1="

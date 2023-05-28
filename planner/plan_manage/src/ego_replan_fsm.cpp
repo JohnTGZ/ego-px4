@@ -20,15 +20,14 @@ namespace ego_planner
     /* ROS Params*/
 
     // This applies an offset to all trajectories received and sent so that they are relative to the world frame
-    nh.param("fsm/frame_offset_x", world_to_uav_origin_tf_.position.x, 0.0);
-    nh.param("fsm/frame_offset_y", world_to_uav_origin_tf_.position.y, 0.0);
-    nh.param("fsm/frame_offset_z", world_to_uav_origin_tf_.position.z, 0.0);
+    nh.param("fsm/frame_offset_x", uav_origin_to_world_tf_.position.x, 0.0);
+    nh.param("fsm/frame_offset_y", uav_origin_to_world_tf_.position.y, 0.0);
+    nh.param("fsm/frame_offset_z", uav_origin_to_world_tf_.position.z, 0.0);
 
     // Reverse signs so that the transformation is from UAV origin frame to world frame
-    uav_origin_to_world_tf_.position.x = -world_to_uav_origin_tf_.position.x;
-    uav_origin_to_world_tf_.position.y = -world_to_uav_origin_tf_.position.y;
-    uav_origin_to_world_tf_.position.z = -world_to_uav_origin_tf_.position.z;
-
+    world_to_uav_origin_tf_.position.x = -uav_origin_to_world_tf_.position.x;
+    world_to_uav_origin_tf_.position.y = -uav_origin_to_world_tf_.position.y;
+    world_to_uav_origin_tf_.position.z = -uav_origin_to_world_tf_.position.z;
 
     /*  fsm param  */
     nh.param("fsm/flight_type", target_type_, -1);
@@ -73,6 +72,8 @@ namespace ego_planner
     data_disp_pub_ = nh.advertise<traj_utils::DataDisp>("planning/data_display", 100);
     heartbeat_pub_ = nh.advertise<std_msgs::Empty>("planning/heartbeat", 10);
     ground_height_pub_ = nh.advertise<std_msgs::Float64>("/ground_height_measurement", 10);
+
+    have_trigger_ = true;
 
     if (target_type_ == TARGET_TYPE::MANUAL_TARGET)
     {
@@ -586,7 +587,7 @@ namespace ego_planner
     Eigen::Vector3d next_wp(
       msg->pose.position.x + world_to_uav_origin_tf_.position.x, 
       msg->pose.position.y + world_to_uav_origin_tf_.position.y, 
-      1.0 + + world_to_uav_origin_tf_.position.z);
+      1.0 + world_to_uav_origin_tf_.position.z);
     
     // Add latest waypoint to waypoint list
     wps_.push_back(next_wp);
@@ -598,6 +599,7 @@ namespace ego_planner
       // Set the formation_start to be second last waypoint 
       formation_start_ = wps_[wpt_id_ - 1];
     }
+
     // Plan from formation_start_ to final waypoint
     planNextWaypoint(wps_[wpt_id_], formation_start_);
   }
@@ -623,6 +625,7 @@ namespace ego_planner
     waypoint_num_ = msg->waypoints.poses.size();
 
     wps_.clear();
+    // Transform received waypoints from world to UAV origin frame
     for (auto pose : msg->waypoints.poses) {
       wps_.push_back(Eigen::Vector3d{
         pose.position.x + world_to_uav_origin_tf_.position.x,
@@ -631,7 +634,7 @@ namespace ego_planner
       });
     }
 
-    for (auto i = 0; i < wps_.size(); i++)
+    for (size_t i = 0; i < wps_.size(); i++)
     {
       visualization_->displayGoalPoint(wps_[i], Eigen::Vector4d(0, 0.5, 0.5, 1), 0.3, i);
       ros::Duration(0.001).sleep();
@@ -738,11 +741,20 @@ namespace ego_planner
   // And publishing this to "global_list"
   void EGOReplanFSM::planNextWaypoint(const Eigen::Vector3d next_wp, const Eigen::Vector3d previous_wp)
   {
+
     Eigen::Vector3d dir = (next_wp - previous_wp).normalized();
-    // Add the formation position as an offset to the waypoint
+    // Offset end_pt_ by the formation position
     end_pt_ = next_wp + Eigen::Vector3d(dir(0) * formation_pos_(0) - dir(1) * formation_pos_(1),
                                         dir(1) * formation_pos_(0) + dir(0) * formation_pos_(1),
                                         formation_pos_(2));
+
+    ROS_INFO("================"); 
+    ROS_INFO("(%f, %f, %f) -> next_wp(%f, %f, %f), end_pt_(%f, %f, %f)", 
+      previous_wp(0), previous_wp(1), previous_wp(2),
+      next_wp(0), next_wp(1), next_wp(2),
+      end_pt_(0), end_pt_(1), end_pt_(2)
+    );
+    ROS_INFO("================"); 
 
     bool success = false;
     std::vector<Eigen::Vector3d> one_pt_wps;
@@ -755,7 +767,6 @@ namespace ego_planner
 
     if (success)
     {
-
       /*** display ***/
       constexpr double step_size_t = 0.1;
       int i_end = floor(planner_manager_->traj_.global_traj.duration / step_size_t);

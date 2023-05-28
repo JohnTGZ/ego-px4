@@ -34,7 +34,7 @@ def get_server_state_callback():
 
 def main():
     rospy.init_node('mission_startup', anonymous=True)
-    rate = rospy.Rate(5) # 5hz
+    rate = rospy.Rate(20) # 20hz
 
     print("Setting to HOVER mode!")
     # Take off 

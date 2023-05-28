@@ -86,15 +86,25 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 12. Create script to takeoff and switch to mission mode.
 13. Fix frame transformation issue
     - Each UAV has their own origin frame relative to the world (Why? PX4 will always start from (0,0,0) in any given frame, so we create our own origin frame for each drone and provide an offset from world for said frame)
-        - No transformation needed
-            - Odom (already in UAV frame)
-            - Planned trajectory (not MINCO) (already in UAV frame)
-        - We need to transform to UAV origin frame for
-            - Received goals (In world frame)
-            - Other drone's MINCO trajectories (In world frame)
-        - Planner will plan in UAV origin frame 
-        - We need to transform to world frame
-            - Broadcasted Trajectories (In world frame)
+        - Input 
+            - Sensor 
+                - NO TRANSFORM
+                    - Input Odom (Already in UAV frame)
+            - User 
+                - TRANSFORM
+                    - Received waypoints (WORLD -> UAV Origin frame)
+            - Plans
+                - TRANSFORM
+                    - Other drone's MINCO trajectories (World -> UAV Origin frame)
+        - Output 
+            - NO TRANSFORM
+                - Planned trajectory (not MINCO) (Already in UAV frame)
+                    - Passed to trajectory server
+            - TRANSFROM
+                - Broadcasted Trajectories (UAV Origin -> world frame)
+                    - Passed to other planner servers
+        - Planner Visualization
+            - 
 
 # Demo
 1. PX4 State control
@@ -120,7 +130,6 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
         - Check if every UAV in formation has finished execution of current waypoint before planning for the next one
         - Trajectory Server should trigger planner to start planning (Via a service call)
     - Add script execute a set of waypoints, then land.
-
 
 
 - Extend to 5 drones
