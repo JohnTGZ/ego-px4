@@ -103,8 +103,11 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
             - TRANSFROM
                 - Broadcasted Trajectories (UAV Origin -> world frame)
                     - Passed to other planner servers
-        - Planner Visualization
-            - 
+- Tested with 4 drones
+    - Works for easy paths, but for more complex paths, there is path collision detected even in an empty map, it is suspected that the depth image detects the other drones as obstacles (which should not be the case according to the paper) 
+        - One solution would be to use the drone_detection module to remove the drone point cloud, assuming it works in simulation
+- Add subscription of waypoints to ego replan FSM. 
+    - Issue is that once the waypoints have executed finish, all drones plan a trajectory to the goal point and face a collision
 
 # Demo
 1. PX4 State control
@@ -114,15 +117,12 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
     - Demo with 4 drones
 
 # Changes TODO
-- 26/5/23
-    - Fix the target goals not being in the correct frame_id/position.
-    - Add subscription of waypoints to ego replan FSM. Test out and see how it turns out
-    - Refactor wpt_id_
-    - Try substituting with actual position
+- Refactor the waypoint execution code, starting with wpt_id_
+- Try substituting the expected trajectory pose with actual position
 
 ## Simulation
 - In Trajectory server
-    - Be able to issue a set of waypoints via an action goal/message
+    - Waypoint execution
         - Cancel/Start/Pause execution
         - Default behaviour
             - Existing waypoints are cleared when new waypoints are issued.
@@ -130,11 +130,9 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
         - Check if every UAV in formation has finished execution of current waypoint before planning for the next one
         - Trajectory Server should trigger planner to start planning (Via a service call)
     - Add script execute a set of waypoints, then land.
+- Use the drone_detection module to remove the drone point cloud, assuming it works in simulation
 
 
-- Extend to 5 drones
-    - Seemingly, Issue with running 5 drones in gazebo is that it detects the drones and treats it as an obstacle: resulting in planning collision
-        - One solution would be to use the drone_detection module to remove the drone point cloud, assuming it works in simulation
 - Look into gazebo plugins for quadrotor dynamics?
     - Promethus & px4_command and SE03 Simulator (within egoswarm v2 repo)
 - Set up a more complex simulation world

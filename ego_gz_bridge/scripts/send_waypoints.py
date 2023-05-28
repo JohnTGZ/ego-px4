@@ -38,8 +38,8 @@ def create_pose(x, y, z):
 
 def pub_waypoints(waypoints):
     wp_msg = Waypoints()
-    wp_msg.header.frame_id = "world"
-    wp_msg.waypoints = waypoints
+    wp_msg.waypoints.header.frame_id = "world"
+    wp_msg.waypoints.poses = waypoints
 
     waypoints_pub.publish(wp_msg)
 
@@ -55,12 +55,12 @@ def main():
     rate = rospy.Rate(30) # 30hz
 
     wait_t = 5
-    start_t = now_t = rospy.get_rostime()
+    start_t = now_t = rospy.get_rostime().to_sec()
 
     print(f"Collecting UAV states, please wait for {wait_t} seconds!")
     while not rospy.is_shutdown() and (now_t - start_t < wait_t):
         get_server_state_callback()
-        now_t = rospy.get_rostime()
+        now_t = rospy.get_rostime().to_sec()
         rate.sleep()
 
     print(f"Checking that all UAVs are in MISSION mode!")
@@ -72,11 +72,7 @@ def main():
     # Send waypoints to UAVs
     print(f"Sending waypoints to UAVs")
     waypoints = []
-    waypoints.append(create_pose(3, 0, 0))
-    waypoints.append(create_pose(3, 3, 0))
-    waypoints.append(create_pose(3, -3, 0))
-    waypoints.append(create_pose(-3, -3, 0))
-    waypoints.append(create_pose(-3, 3, 0))
+    waypoints.append(create_pose(5, 0, 1))
     pub_waypoints(waypoints)
 
     print(f"Waypoints sent!")

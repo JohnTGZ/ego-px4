@@ -28,38 +28,38 @@
     <arg name="vehicle" default="$(arg vehicle)"/>
     <arg name="model" default="$(arg model)"/>
     <arg name="init_x"     value="1.0"/>
-    <arg name="init_y"     value="-0.5"/>
+    <arg name="init_y"     value="-1.0"/>
     <arg name="init_z"     value="0.0"/>
   </include>
 
   <!-- Drone 1 -->
-  <!-- <include file="$(find ego_gz_bridge)/launch/gazebo/gz_single_uav.launch">
+  <include file="$(find ego_gz_bridge)/launch/gazebo/gz_single_uav.launch">
     <arg name="drone_id"   value="1"/>
     <arg name="vehicle" default="$(arg vehicle)"/>
     <arg name="model" default="$(arg model)"/>
-    <arg name="init_x"     value="0.0"/>
-    <arg name="init_y"     value="0.5"/>
+    <arg name="init_x"     value="1.0"/>
+    <arg name="init_y"     value="1.0"/>
     <arg name="init_z"     value="0.0"/>
-  </include> -->
+  </include>
 
   <!-- Drone 2 -->
-  <!-- <include file="$(find ego_gz_bridge)/launch/gazebo/gz_single_uav.launch">
+  <include file="$(find ego_gz_bridge)/launch/gazebo/gz_single_uav.launch">
     <arg name="drone_id"   value="2"/>
     <arg name="vehicle" default="$(arg vehicle)"/>
     <arg name="model" default="$(arg model)"/>
-    <arg name="init_x"     value="0.0"/>
+    <arg name="init_x"     value="-1.0"/>
     <arg name="init_y"     value="-1.0"/>
     <arg name="init_z"     value="0.0"/>
-  </include> -->
+  </include>
 
   <!-- Drone 3 -->
-  <!-- <include file="$(find ego_gz_bridge)/launch/gazebo/gz_single_uav.launch">
+  <include file="$(find ego_gz_bridge)/launch/gazebo/gz_single_uav.launch">
     <arg name="drone_id"   value="3"/>
     <arg name="vehicle" default="$(arg vehicle)"/>
     <arg name="model" default="$(arg model)"/>
-    <arg name="init_x"     value="0.0"/>
-    <arg name="init_y"     value="0.0"/>
+    <arg name="init_x"     value="-1.0"/>
+    <arg name="init_y"     value="1.0"/>
     <arg name="init_z"     value="0.0"/>
-  </include> -->
+  </include>
 
 </launch>

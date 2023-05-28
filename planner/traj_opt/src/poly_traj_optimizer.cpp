@@ -1548,8 +1548,10 @@ namespace ego_planner
   {
     if (i_dp <= 0 || i_dp > ConstraintPoints::two_thirds_id(cps_.points, touch_goal_)) // only apply to first 2/3
       return false;
-    if ((int)swarm_trajs_->size() < formation_num_ && drone_id_ != formation_num_-1)
+    if ((int)swarm_trajs_->size() < formation_num_ && drone_id_ != formation_num_-1){
+      ROS_ERROR("swarm_trajs_->size() < formation_num_ && drone_id_ != formation_num_-1");
       return false;
+    }
 
     gradp.setZero();
     gradt = 0;
@@ -1563,7 +1565,10 @@ namespace ego_planner
     double pt_time = t_now_ + t;
 
     double l = 0, dl_dt = 0;
-    int id_end = drone_id_ == (formation_num_-1) ? formation_num_ -1 : formation_num_;
+    bool drone_id_is_form_num_ = ( drone_id_ == (formation_num_-1) );
+
+    int id_end = drone_id_is_form_num_ ? formation_num_ -1 : formation_num_;
+
     for (int id = 0; id < id_end; ++id)
     {
       if ((swarm_trajs_->at(id).drone_id < 0) || swarm_trajs_->at(id).drone_id == drone_id_)

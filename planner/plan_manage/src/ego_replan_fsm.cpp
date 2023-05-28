@@ -748,14 +748,6 @@ namespace ego_planner
                                         dir(1) * formation_pos_(0) + dir(0) * formation_pos_(1),
                                         formation_pos_(2));
 
-    ROS_INFO("================"); 
-    ROS_INFO("(%f, %f, %f) -> next_wp(%f, %f, %f), end_pt_(%f, %f, %f)", 
-      previous_wp(0), previous_wp(1), previous_wp(2),
-      next_wp(0), next_wp(1), next_wp(2),
-      end_pt_(0), end_pt_(1), end_pt_(2)
-    );
-    ROS_INFO("================"); 
-
     bool success = false;
     std::vector<Eigen::Vector3d> one_pt_wps;
     one_pt_wps.push_back(end_pt_);

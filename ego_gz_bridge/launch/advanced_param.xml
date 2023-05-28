@@ -152,13 +152,21 @@
         <param name="optimization/record_opt" value="true"/>
         <!-- formation: Affects the target position of the drone relative to the goal-->
         <param name="formation/num" value="$(arg num_drones)"/>
-        <rosparam param="formation/start">[-32, 0, 1]</rosparam>
+        <!-- <rosparam param="formation/start">[0, 0, 1]</rosparam>
         <rosparam param="formation/drone0">[  1, -0.5, 0]</rosparam>
         <rosparam param="formation/drone1">[  1,  0.5, 0]</rosparam>
-        <!-- <rosparam param="formation/drone2">[  0, -1.0, 0]</rosparam>
+        <rosparam param="formation/drone2">[  0, -1.0, 0]</rosparam>
         <rosparam param="formation/drone3">[  0,  0.0, 0]</rosparam>
         <rosparam param="formation/drone4">[  0,  1.0, 0]</rosparam>
         <rosparam param="formation/drone5">[ -1, -0.5, 0]</rosparam>
         <rosparam param="formation/drone6">[ -1,  0.5, 0]</rosparam> -->
+        <rosparam param="formation/start">[0, 0, 0]</rosparam>
+        <rosparam param="formation/drone0">[  1, -1, 0]</rosparam>
+        <rosparam param="formation/drone1">[  1,  1, 0]</rosparam>
+        <rosparam param="formation/drone2">[  -1, -1, 0]</rosparam>
+        <rosparam param="formation/drone3">[  -1,  1, 0]</rosparam>
+        <rosparam param="formation/drone4">[  0,  1.0, 0]</rosparam>
+        <rosparam param="formation/drone5">[ -1, -0.5, 0]</rosparam>
+        <rosparam param="formation/drone6">[ -1,  0.5, 0]</rosparam>
     </node>
 </launch>
