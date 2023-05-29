@@ -78,7 +78,7 @@
         <arg name="use_distinctive_trajs" value="false" />
         <!-- 1: use 2D Nav Goal to select goal  -->
         <!-- 2: Assign waypoints via a topic  -->
-        <arg name="flight_type" value="2" />
+        <arg name="flight_type" value="1" />
 
     </include>
 

@@ -30,7 +30,7 @@ enum ServerState
   E_STOP,
 };
 
-/* State machine  */
+/* State machine events */
 enum ServerEvent
 {
   TAKEOFF_E,        // 0
@@ -80,8 +80,8 @@ public:
   void serverEventCb(const std_msgs::Int8::ConstPtr & msg);
 
   /**
-   * Timer callback to generate PVA commands for executing trajectory.
-   * It will determine what sort of trajectory execution (takeoff, landing, hover, mission etc.)
+   * Timer callback to extract PVA commands from subscribed plan for executing trajectory.
+   * It will determine what sort of trajectory to execute (takeoff, landing, hover, mission etc.)
    * based on the current state of the state machine.
   */
   void execTrajTimerCb(const ros::TimerEvent &e);
@@ -207,10 +207,10 @@ public:
       }
   }
 
-  /** @brief StateToString interprets the input server state **/
-  const std::string EventToString(ServerEvent state)
+  /** @brief StateToString interprets the input server event **/
+  const std::string EventToString(ServerEvent event)
   {
-      switch (state)
+      switch (event)
       {
           case ServerEvent::TAKEOFF_E:   return "TAKEOFF";
           case ServerEvent::LAND_E: return "LAND";
@@ -228,10 +228,10 @@ public:
   it will then set the event to be EMPTY, which prevents further processing*/
   ServerEvent getServerEvent();
 
-  /** Transition state machine to new_state.
+  /** Transition state machine to desired state.
    * This should ONLY be called within tickServerStateTimerCb.
    */
-  void setServerState(ServerState new_state); 
+  void setServerState(ServerState des_state); 
 
   /** get current server state */
   ServerState getServerState(); 
@@ -260,7 +260,7 @@ private:
   ros::Subscriber set_server_state_sub_; // Subscriber for setting server state
 
   ros::Timer exec_traj_timer_; // Timer to generate PVA commands for trajectory execution
-  ros::Timer tick_sm_timer_; // Timer to tick the state machine 
+  ros::Timer tick_state_timer_; // Timer to tick the state machine 
   ros::Timer state_pub_timer_; // Timer to publish server states
 
   /** @brief Service clients **/

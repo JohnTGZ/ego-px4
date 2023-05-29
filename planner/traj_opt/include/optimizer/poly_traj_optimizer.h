@@ -73,7 +73,7 @@ namespace ego_planner
     // PtsChk_t pts_check_;
 
     int drone_id_;
-    int cps_num_prePiece_;   // number of distinctive constraint points each piece
+    int cps_num_prePiece_;   // number of distinctive constraint points per piece
     int variable_num_;       // optimization variables
     int piece_num_;          // poly traj piece numbers
     int iter_num_;           // iteration of the solver
@@ -139,7 +139,10 @@ namespace ego_planner
 
     std::vector<std::pair<int, int>> finelyCheckConstraintPointsOnly(Eigen::MatrixXd &init_points);
 
-    /* check collision and set {p,v} pairs to constraint points */
+    /**
+     * @brief check collision and set {p,v} pairs to constraint points
+     * 
+     */
     CHK_RET finelyCheckAndSetConstraintPoints(std::vector<std::pair<int, int>> &segments,
                                               const poly_traj::MinJerkOpt &pt_data,
                                               const bool flag_first_init /*= true*/);

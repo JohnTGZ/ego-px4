@@ -263,7 +263,6 @@ namespace ego_planner
     return true;
   }
 
-  /* check collision and set {p,v} pairs to constrain points */
   PolyTrajOptimizer::CHK_RET PolyTrajOptimizer::finelyCheckAndSetConstraintPoints(
       std::vector<std::pair<int, int>> &segments,
       const poly_traj::MinJerkOpt &pt_data,
@@ -372,7 +371,7 @@ namespace ego_planner
         segment_ids[i].second = segment_ids[i + 1].second;
         segment_ids.erase(segment_ids.begin() + i + 1);
         --i;
-        ROS_WARN("A conor case 2, I have never exeam it.");
+        ROS_WARN("A cornor case 2, I have never exeam it.");
       }
       else
       {
@@ -1549,7 +1548,7 @@ namespace ego_planner
     if (i_dp <= 0 || i_dp > ConstraintPoints::two_thirds_id(cps_.points, touch_goal_)) // only apply to first 2/3
       return false;
     if ((int)swarm_trajs_->size() < formation_num_ && drone_id_ != formation_num_-1){
-      ROS_ERROR("swarm_trajs_->size() < formation_num_ && drone_id_ != formation_num_-1");
+      // ROS_ERROR("swarm_trajs_->size() < formation_num_ && drone_id_ != formation_num_-1");
       return false;
     }
 

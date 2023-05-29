@@ -41,7 +41,7 @@ void TrajServer::init(ros::NodeHandle& nh)
 
   /* Timer callbacks */
   exec_traj_timer_ = nh.createTimer(ros::Duration(1/pub_cmd_freq_), &TrajServer::execTrajTimerCb, this);
-  tick_sm_timer_ = nh.createTimer(ros::Duration(1/sm_tick_freq_), &TrajServer::tickServerStateTimerCb, this);
+  tick_state_timer_ = nh.createTimer(ros::Duration(1/sm_tick_freq_), &TrajServer::tickServerStateTimerCb, this);
 
   state_pub_timer_ = nh.createTimer(ros::Duration(1/server_state_pub_freq), &TrajServer::pubServerStateTimerCb, this);
 
@@ -690,12 +690,12 @@ void TrajServer::publishServerState(){
   server_state_pub_.publish(state_msg);
 }
 
-void TrajServer::setServerState(ServerState new_state)
+void TrajServer::setServerState(ServerState des_state)
 {
   logInfo(string_format("Transitioning server state: %s -> %s", 
-    StateToString(getServerState()).c_str(), StateToString(new_state).c_str()));
+    StateToString(getServerState()).c_str(), StateToString(des_state).c_str()));
 
-  server_state_ = new_state;
+  server_state_ = des_state;
 }
 
 ServerState TrajServer::getServerState()
@@ -714,7 +714,7 @@ ServerEvent TrajServer::getServerEvent()
 {
   // logInfo(string_format("Retrieved server event: %s", EventToString(server_event_).c_str()));
   ServerEvent event = server_event_;
-  server_event_ = ServerEvent::EMPTY_E;
+  server_event_ = ServerEvent::EMPTY_E;  // Reset to empty
 
   return event;
 }

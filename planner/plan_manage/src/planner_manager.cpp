@@ -275,6 +275,8 @@ namespace ego_planner
 
     Eigen::MatrixXd cstr_pts = initMJO.getInitConstraintPoints(ploy_traj_opt_->get_cps_num_prePiece_());
     vector<std::pair<int, int>> segments;
+
+    // A star search is used in finelyCheckAndSetConstraintPoints
     if (ploy_traj_opt_->finelyCheckAndSetConstraintPoints(segments, initMJO, true) == PolyTrajOptimizer::CHK_RET::ERR)
     {
       return false;
@@ -428,7 +430,6 @@ namespace ego_planner
     return false;
   }
 
-  // Plan global trajectory from given waypoints
   bool EGOPlannerManager::planGlobalTrajWaypoints(
       const Eigen::Vector3d &start_pos, const Eigen::Vector3d &start_vel,
       const Eigen::Vector3d &start_acc, const std::vector<Eigen::Vector3d> &waypoints,
@@ -463,6 +464,7 @@ namespace ego_planner
     double des_vel = pp_.max_vel_ / 1.5;
     Eigen::VectorXd time_vec(waypoints.size());
 
+    // Try replanning up to 2 times if the velocity constraints are not fulfilled
     for (int j = 0; j < 2; ++j)
     {
       for (size_t i = 0; i < waypoints.size(); ++i)

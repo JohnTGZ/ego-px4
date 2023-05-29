@@ -51,8 +51,8 @@ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 private:
-  /* ---------- flag ---------- */
-  enum FSM_EXEC_STATE
+  /* State machine states */
+  enum ServerState
   {
     INIT,
     WAIT_TARGET,
@@ -62,11 +62,56 @@ private:
     EMERGENCY_STOP,
     SEQUENTIAL_START
   };
+
+  /* State machine events */
+  enum ServerEvent
+  {
+    WAIT_TARGET_E,      // 1
+    GEN_NEW_TRAJ_E,     // 2
+    REPLAN_TRAJ_E,      // 3
+    EXEC_TRAJ_E,        // 4
+    EMERGENCY_STOP_E,   // 5
+    SEQUENTIAL_START_E, // 6
+    EMPTY_E             // 7
+  };
+
+  /** @brief StateToString interprets the input server state **/
+  const std::string StateToString(ServerState state)
+  {
+      switch (state)
+      {
+          case ServerState::INIT:   return "INIT";
+          case ServerState::WAIT_TARGET:   return "WAIT_TARGET";
+          case ServerState::GEN_NEW_TRAJ:   return "GEN_NEW_TRAJ";
+          case ServerState::REPLAN_TRAJ: return "REPLAN_TRAJ";
+          case ServerState::EXEC_TRAJ:   return "EXEC_TRAJ";
+          case ServerState::EMERGENCY_STOP:   return "EMERGENCY_STOP";
+          case ServerState::SEQUENTIAL_START:   return "SEQUENTIAL_START";
+          default:      return "[Unknown State]";
+      }
+  }
+
+  /** @brief StateToString interprets the input server event **/
+  const std::string EventToString(ServerEvent event)
+  {
+      switch (event)
+      {
+          case ServerEvent::WAIT_TARGET_E:   return "WAIT_TARGET_E";
+          case ServerEvent::GEN_NEW_TRAJ_E: return "GEN_NEW_TRAJ_E";
+          case ServerEvent::REPLAN_TRAJ_E:   return "REPLAN_TRAJ_E";
+          case ServerEvent::EXEC_TRAJ_E:   return "EXEC_TRAJ_E";
+          case ServerEvent::EMERGENCY_STOP_E:   return "EMERGENCY_STOP_E";
+          case ServerEvent::SEQUENTIAL_START_E:   return "SEQUENTIAL_START_E";
+          case ServerEvent::EMPTY_E:   return "EMPTY_E";
+          default:      return "[Unknown Event]";
+      }
+  }
+
   enum TARGET_TYPE
   {
     MANUAL_TARGET = 1,
     PRESET_TARGET = 2,
-    REFENCE_PATH = 3
+    REFENCE_PATH = 3 //TODO Remove
   };
   
   std::string node_name_{"EgoPlannerFSM"};
@@ -99,8 +144,9 @@ private:
 
   // Indicates that all agents within a swarm have a provided trajectory
   bool have_recv_pre_agent_; 
-  bool have_trigger_, have_target_, have_odom_, have_new_target_, touch_goal_, mandatory_stop_;
-  FSM_EXEC_STATE current_state_;
+  bool have_trigger_, have_target_, have_odom_, have_new_target_, touch_goal_;
+  ServerState current_state_{ServerState::INIT};
+  ServerEvent server_event_{ServerEvent::EMPTY_E};
   int continously_called_times_{0};
 
   Eigen::Vector3d start_pt_, start_vel_, start_acc_;   // start state
@@ -119,8 +165,10 @@ private:
   /* ROS utils */
   ros::NodeHandle node_;
   // Timer to execute FSM callback
-  ros::Timer exec_timer_;
-  ros::Timer safety_timer_;
+  ros::Timer tick_state_timer_;
+  ros::Timer exec_state_timer_;
+  ros::Timer safety_timer_; // TODO remove
+
   ros::Subscriber waypoint_sub_, odom_sub_, trigger_sub_, broadcast_ploytraj_sub_, mandatory_stop_sub_;
   ros::Subscriber waypoints_sub_;
   ros::Publisher poly_traj_pub_, data_disp_pub_, broadcast_ploytraj_pub_, heartbeat_pub_, ground_height_pub_;
@@ -132,38 +180,116 @@ private:
 
 private: 
 
-  /* state machine functions */
-  void execFSMCallback(const ros::TimerEvent &e);
-  void changeFSMExecState(FSM_EXEC_STATE new_state, string pos_call);
-  void printFSMExecState();
-  std::pair<int, EGOReplanFSM::FSM_EXEC_STATE> timesOfConsecutiveStateCalls();
+  /* Timer callbacks */
 
-  /* safety */
-  void checkCollisionCallback(const ros::TimerEvent &e);
+  /**
+   * @brief Timer callback to tick State Machine
+   * This callback should only ever handle transitions between states,
+   * It should not attempt to call any execution function, this 
+   * should be left to the execStateTimerCB callback.
+   * @param e 
+   */
+  void tickStateTimerCB(const ros::TimerEvent &e);
+
+  /**
+   * @brief Timer callback to execute looping commands depending on the current state 
+   * 
+   * @param e 
+   */
+  void execStateTimerCB(const ros::TimerEvent &e);
+
+  /**
+   * @brief Emergency stop the drone
+   * 
+   * @param stop_pos 
+   * @return true 
+   * @return false 
+   */
   bool callEmergencyStop(Eigen::Vector3d stop_pos);
 
-  /* local planning */
+  /**
+   * @brief Plans a path using planner_manager_ methods
+   * 
+   * @param flag_use_poly_init 
+   * @param flag_randomPolyTraj 
+   * @return true 
+   * @return false 
+   */
   bool callReboundReplan(bool flag_use_poly_init, bool flag_randomPolyTraj);
+
+  /**
+   * @brief Used when no local trajectory is present, calls callReboundReplan
+   * 
+   * @param trial_times 
+   * @return true 
+   * @return false 
+   */
   bool planFromGlobalTraj(const int trial_times = 1);
+
+  /**
+   * @brief Used when a local trajectory has already being planned, calls callReboundReplan
+   * 
+   * @param trial_times 
+   * @return true 
+   * @return false 
+   */
   bool planFromLocalTraj(const int trial_times = 1);
 
-  /* global trajectory */
-
-  void waypointCallback(const geometry_msgs::PoseStampedPtr &msg); // Individual waypoint callback
-  void waypointsCB(const trajectory_server_msgs::WaypointsPtr &msg);
+  /**
+   * @brief Plan from current odom position to next waypoint given the direction vector of next and prev wp
+   * This is done by calling planGlobalTrajWaypoints
+   * And publishing this to "global_list"
+   * 
+   * @param next_wp 
+   * @param previous_wp 
+   */
   void planNextWaypoint(const Eigen::Vector3d next_wp, const Eigen::Vector3d previous_wp);
 
-  /* input-output */
+  /**
+   * @brief Check if goal is reached and replanning is required
+   * 
+   * @return std::pair<bool,bool> 
+   */
+  std::pair<bool,bool> isGoalReachedAndReplanNeeded();
+
+  /**
+   * 
+   */
+
+  /**
+   * @brief Perform the following checks
+   * 1. Ground height
+   * 2. Sensor data timeout
+   * 3. From local trajectory, clearance between agent trajectories 
+   * 
+   * @return ServerEvent 
+   */
+  ServerEvent safetyChecks();
+
+  /* Subscriber callbacks */
+
+  /**
+   * @brief Individual waypoint callback
+   * 
+   * @param msg 
+   */
+  void waypointCallback(const geometry_msgs::PoseStampedPtr &msg);
+
+  /**
+   * @brief Multiple waypoints callback
+   * 
+   * @param msg 
+   */
+  void waypointsCB(const trajectory_server_msgs::WaypointsPtr &msg);
+
   void mandatoryStopCallback(const std_msgs::Empty &msg);
   void odometryCallback(const nav_msgs::OdometryConstPtr &msg);
   void triggerCallback(const geometry_msgs::PoseStampedPtr &msg);
   void RecvBroadcastMINCOTrajCallback(const traj_utils::MINCOTrajConstPtr &msg);
+  
+  /* Helper methods */
   void polyTraj2ROSMsg(traj_utils::PolyTraj &poly_msg, traj_utils::MINCOTraj &MINCO_msg);
-
-  /* ground height measurement */
   bool measureGroundHeight(double &height);
-
-  std::pair<bool,bool> isGoalReachedAndReplanNeeded();
 
   // Transform the trajectory from UAV frame to world frame
   void transformMINCOTrajectoryToWorld(traj_utils::MINCOTraj & MINCO_msg){
@@ -203,6 +329,47 @@ private:
     MINCO_msg.end_p[2] += world_to_uav_origin_tf_.position.z;
   }
   
+  /* State Machine handling methods */
+  
+  // TODO: Refactor this
+  std::pair<int, EGOReplanFSM::ServerState> timesOfConsecutiveStateCalls();
+
+  void printFSMExecState();
+
+  ServerState getServerState(){
+    return current_state_;
+  }
+
+  void setServerState(ServerState des_state){
+    logInfo(string_format("Transitioning server state: %s -> %s", 
+      StateToString(getServerState()).c_str(), StateToString(des_state).c_str()));
+
+    if (des_state == getServerState())
+      continously_called_times_++;
+    else
+      continously_called_times_ = 1;
+
+    current_state_ = des_state;
+  }
+
+  void setServerEvent(ServerEvent event)
+  {
+    logInfo(string_format("Set server event: %s", EventToString(event).c_str()));
+
+    server_event_ = event;
+  }
+
+  ServerEvent getServerEvent()
+  {
+    // logInfo(string_format("Retrieved server event: %s", EventToString(server_event_).c_str()));
+    ServerEvent event = server_event_;
+    server_event_ = ServerEvent::EMPTY_E; // Reset to empty
+
+    return event;
+  }
+
+
+
 private:
 
   /* Logging functions */

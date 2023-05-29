@@ -116,12 +116,9 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
     - Demo with 2 drones
     - Demo with 4 drones
 
-# Changes TODO
-- Refactor the waypoint execution code, starting with wpt_id_
-- Try substituting the expected trajectory pose with actual position
-
 ## Simulation
 - In Trajectory server
+    - Refactor the state machine execution
     - Waypoint execution
         - Cancel/Start/Pause execution
         - Default behaviour
@@ -130,13 +127,16 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
         - Check if every UAV in formation has finished execution of current waypoint before planning for the next one
         - Trajectory Server should trigger planner to start planning (Via a service call)
     - Add script execute a set of waypoints, then land.
+- Explore weird phenomenom between drone_num/formation_num and path planning problems
+    - When actual number of drones are 2 
+        - If num_drone == 2, then the planned path is abnormal and goes very close to the ground
+        - If num_drone == 3, the planned path is normal. 
 - Use the drone_detection module to remove the drone point cloud, assuming it works in simulation
-
+- Try substituting the expected trajectory pose with actual position
 
 - Look into gazebo plugins for quadrotor dynamics?
     - Promethus & px4_command and SE03 Simulator (within egoswarm v2 repo)
 - Set up a more complex simulation world
-- In Gazebo, we need a new mesh to visualize the robot (current one is simply scaled down from iris, and looks weird, perhaps we could use hummingbird model?)
 
 ## gridmap
 - Add body to camera transform as a matrix ROS Param (Make sure that it is same as that in simulation)
