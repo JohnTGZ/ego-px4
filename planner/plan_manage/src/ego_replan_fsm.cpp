@@ -271,8 +271,7 @@ namespace ego_planner
         // If first drone or it has received the trajectory of the previous agent.
         if (planner_manager_->pp_.drone_id <= 0 || (planner_manager_->pp_.drone_id >= 1 && have_recv_pre_agent_))
         {
-          bool success = planFromGlobalTraj(10); // zx-todo
-          if (success)
+          if (planFromGlobalTraj(10))
           {
             setServerState(EXEC_TRAJ);
           }
