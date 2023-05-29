@@ -278,7 +278,7 @@ namespace ego_planner
           }
           else
           {
-            logError("Failed to generate the first trajectory!!!");
+            logError("Failed to generate the first global trajectory!!!");
             setServerState(SEQUENTIAL_START); // "setServerState" must be called each time planned
           }
         }
