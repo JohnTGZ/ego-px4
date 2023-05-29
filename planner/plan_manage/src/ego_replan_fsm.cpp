@@ -146,21 +146,6 @@ namespace ego_planner
             break;
         }
 
-        // If first drone or it has received the trajectory of the previous agent.
-        if (planner_manager_->pp_.drone_id <= 0 || (planner_manager_->pp_.drone_id >= 1 && have_recv_pre_agent_))
-        {
-          bool success = planFromGlobalTraj(10); // zx-todo
-          if (success)
-          {
-            setServerState(EXEC_TRAJ);
-          }
-          else
-          {
-            logError("Failed to generate the first trajectory!!!");
-            setServerState(SEQUENTIAL_START); // "setServerState" must be called each time planned
-          }
-        }
-
         break;
       }
 
@@ -283,6 +268,21 @@ namespace ego_planner
 
       case SEQUENTIAL_START: 
       {
+        // If first drone or it has received the trajectory of the previous agent.
+        if (planner_manager_->pp_.drone_id <= 0 || (planner_manager_->pp_.drone_id >= 1 && have_recv_pre_agent_))
+        {
+          bool success = planFromGlobalTraj(10); // zx-todo
+          if (success)
+          {
+            setServerState(EXEC_TRAJ);
+          }
+          else
+          {
+            logError("Failed to generate the first trajectory!!!");
+            setServerState(SEQUENTIAL_START); // "setServerState" must be called each time planned
+          }
+        }
+
         break;
       }
 
