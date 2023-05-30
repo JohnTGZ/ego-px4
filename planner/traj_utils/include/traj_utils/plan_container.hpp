@@ -11,7 +11,7 @@ using std::vector;
 
 namespace ego_planner
 {
-  // Each pair contains (duration, position)
+  // Outer idx is id of constraint piece, inner idx is constraint points with individual pairs (time, position)
   typedef std::vector<std::vector<std::pair<double, Eigen::Vector3d>>> PtsChk_t;
 
   struct GlobalTrajData

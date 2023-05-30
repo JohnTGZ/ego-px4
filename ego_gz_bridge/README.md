@@ -81,10 +81,11 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
     - Size can be approximated as a cuboid: 0.21 * 0.21 * 0.12
 8. Offset the starting mavros local position of the drone by creating new frames and using those as the origin frame for each drone
 9. Fixed issues with simulating multiple robots in Gazebo Classic
-10. Add a visualization mesh to each drone (Similar to simple quad simulator's implementation)
-11. Use a new mesh (fake_drone.dae) model to represent the drone in gazebo
-12. Create script to takeoff and switch to mission mode.
-13. Fix frame transformation issue
+10. Visualization 
+    - Add a visualization mesh to each drone (Similar to simple quad simulator's implementation)
+    - Use a new mesh (fake_drone.dae) model to represent the drone in gazebo
+12. Create script for takeoff, switching to mission mode and sending waypoints.
+13. Fix frame transformation issue that comes with PX4 firmware
     - Each UAV has their own origin frame relative to the world (Why? PX4 will always start from (0,0,0) in any given frame, so we create our own origin frame for each drone and provide an offset from world for said frame)
         - Input 
             - Sensor 
@@ -103,46 +104,50 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
             - TRANSFROM
                 - Broadcasted Trajectories (UAV Origin -> world frame)
                     - Passed to other planner servers
-- Tested with 4 drones
+14. Tested with 4 drones
     - Works for easy paths, but for more complex paths, there is path collision detected even in an empty map, it is suspected that the depth image detects the other drones as obstacles (which should not be the case according to the paper) 
         - One solution would be to use the drone_detection module to remove the drone point cloud, assuming it works in simulation
-- Add subscription of waypoints to ego replan FSM. 
-    - Issue is that once the waypoints have executed finish, all drones plan a trajectory to the goal point and face a collision
+15. Refactor code to make it cleaner, easier to modify for additional functionality in the future
+    - FSM 
+        - Refactor the state machine execution
+        - Make transition tables between states more explicit
+    - Waypoint execution 
+        - Added functionality to accept waypoints via topics rather than through ros parameters
+        - Created a new class to abstract away handling of waypoints
 
 # Demo
 1. PX4 State control
     - Demo takeoff, landing
 2. Multiple drones in Gazebo
-    - Demo with 2 drones
     - Demo with 4 drones
+        - Without obstacles
+        - with obstacles
+    - Demo with 2 drones
+3. Stuff to look at
+    - Add pausing/cancellation of waypoints
+    - Use drone_detection module to remove the drone point cloud, starting with simulation.
+    - Replanning intentionally does not take into account the current position of the drone. This could be perhaps due to the issue of not being sure if the position of the drone relative to the world frame is accurate, due to possible drift from VIO.
 
 ## Simulation
 - In Trajectory server
-    - Refactor the state machine execution
     - Waypoint execution
         - Cancel/Start/Pause execution
-        - Default behaviour
-            - Existing waypoints are cleared when new waypoints are issued.
-        - Specify formations to execute waypoints
-        - Check if every UAV in formation has finished execution of current waypoint before planning for the next one
-        - Trajectory Server should trigger planner to start planning (Via a service call)
-    - Add script execute a set of waypoints, then land.
+        - Handle goals in obstacle regions (Cancel the goal?)
+- Use the drone_detection module to remove the drone point cloud
+- Look into gazebo plugins for quadrotor dynamics?
+    - Promethus & px4_command and SE03 Simulator (within egoswarm v2 repo)
+- Set up a more complex simulation world
 - Explore weird phenomenom between drone_num/formation_num and path planning problems
     - When actual number of drones are 2 
         - If num_drone == 2, then the planned path is abnormal and goes very close to the ground
         - If num_drone == 3, the planned path is normal. 
-- Use the drone_detection module to remove the drone point cloud, assuming it works in simulation
-- Try substituting the expected trajectory pose with actual position
-
-- Look into gazebo plugins for quadrotor dynamics?
-    - Promethus & px4_command and SE03 Simulator (within egoswarm v2 repo)
-- Set up a more complex simulation world
 
 ## gridmap
 - Add body to camera transform as a matrix ROS Param (Make sure that it is same as that in simulation)
 - Take in intrinsic params of camera via camera_info topic
 
 ## Trajectory Server
+- Does not check if every UAV in formation has finished execution of current waypoint before planning for the next one
 - For trajectory server, read the current state of the mavros/state topic before determining the starting state machine state.
 - Disabling of offboard mode for land state would be a good feature. Current challenge to implement it is to be able to reliably check that the drone has actually landed (Otherwise it will be stuck in AUTO.LOITER while hovering in the air, being unable to disarm).
 
@@ -153,7 +158,7 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 - Test compilation on radxa
 
 # Issues
-- Replanning does not take into account the current position of the drone. This could be perhaps due to the issue of not being sure if the position of the drone relative to the world frame is accurate, due to possible drift from VIO.
+- Replanning intentionally does not take into account the current position of the drone. This could be perhaps due to the issue of not being sure if the position of the drone relative to the world frame is accurate, due to possible drift from VIO.
 
 # Future Roadmap
 - Solidify framework for managing multiple robots

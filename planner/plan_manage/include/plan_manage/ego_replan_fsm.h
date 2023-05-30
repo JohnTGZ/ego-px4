@@ -29,6 +29,124 @@ using std::vector;
 namespace ego_planner
 {
 
+class Waypoint
+{
+public:
+  Waypoint(){
+    reset();
+  }
+
+  void reset(){
+    cur_wp_idx_ = 0;
+    waypoints.clear();
+  }
+  
+  bool addWP(const Eigen::Vector3d& wp){
+    if (!WPWithinBounds(wp)){
+      ROS_ERROR("Adding Out of bound Waypoints");
+      return false;
+    }
+    waypoints.push_back(wp);
+    return true;
+  }
+
+  /* Getter methods */
+
+  Eigen::Vector3d getWP(const int& idx){
+    if (!idxWithinBounds(idx)){
+      ROS_ERROR("Retrieved wp beyond size of waypoints");
+      throw "Retrieved wp beyond size of waypoints";
+    }
+    return waypoints[idx];
+  }
+
+  Eigen::Vector3d getNextWP(){
+    if (!idxWithinBounds(cur_wp_idx_)){
+      ROS_ERROR("Retrieved next wp beyond size of waypoints");
+      throw "Retrieved next wp beyond size of waypoints";
+    }
+    return waypoints[cur_wp_idx_];
+  }
+
+  Eigen::Vector3d getStartWP() const {
+    return next_start_wp_;
+  }
+
+  Eigen::Vector3d getLast() const {
+    if (waypoints.empty()){
+      ROS_ERROR("Trying to get last wp from empty waypoint list");
+      throw "Trying to get last wp from empty waypoint list";
+    }
+    return waypoints.back();
+  }
+
+  size_t getSize() const {
+    return waypoints.size();
+  }
+
+  int getCurIdx() const {
+    return cur_wp_idx_;
+  }
+
+  /* Setter methods */
+
+  void setStartWP(const Eigen::Vector3d& wp) {
+    next_start_wp_ = wp;
+  }
+
+  void iterateNextWP() {
+    if (!idxWithinBounds(cur_wp_idx_ + 1)){
+      ROS_ERROR("Iterating index beyond size of waypoints");
+      throw "Iterating index beyond size of waypoints";
+    }
+    else {
+      cur_wp_idx_++;
+    }
+  }
+
+  /* Checking methods */
+
+  bool isFinalWP() {
+    if (cur_wp_idx_ == waypoints.size() - 1){
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * @brief Iterate to next waypoint
+   * 
+   */
+  // Eigen::Vector3d pop() {
+  //   if (!idxWithinBounds(cur_wp_idx_)){
+  //     throw "Popping beyond size of waypoints";
+  //   }
+  //   return waypoints[cur_wp_idx_];
+  // }
+
+private:
+  bool idxWithinBounds(const int& idx){
+    return (
+      idx >= 0 
+      && idx < waypoints.size()
+    );
+  }
+
+  bool WPWithinBounds(Eigen::Vector3d wp){
+    return (
+      wp(2) > 0.05 
+    );
+  }
+  
+  Eigen::Vector3d next_start_wp_;
+
+  std::vector<Eigen::Vector3d> waypoints;
+  size_t cur_wp_idx_;
+
+
+  std::queue<Eigen::Vector3d> wp_queue_;
+};
+
 template<typename ... Args>
 std::string string_format( const std::string& format, Args ... args )
 {
@@ -55,24 +173,24 @@ private:
   enum ServerState
   {
     INIT,
-    WAIT_TARGET,
-    GEN_NEW_TRAJ,
-    REPLAN_TRAJ,
+    READY,
+    PLAN_NEW_GLOBAL_TRAJ,
+    PLAN_LOCAL_TRAJ,
     EXEC_TRAJ,
     EMERGENCY_STOP,
-    SEQUENTIAL_START
+    PLAN_GLOBAL_TRAJ
   };
 
   /* State machine events */
   enum ServerEvent
   {
-    WAIT_TARGET_E,      // 1
-    GEN_NEW_TRAJ_E,     // 2
-    REPLAN_TRAJ_E,      // 3
-    EXEC_TRAJ_E,        // 4
-    EMERGENCY_STOP_E,   // 5
-    SEQUENTIAL_START_E, // 6
-    EMPTY_E             // 7
+    EMPTY_E,             // 1
+    READY_E,      // 2
+    PLAN_NEW_GLOBAL_TRAJ_E,     // 3
+    PLAN_LOCAL_TRAJ_E,      // 4
+    EXEC_TRAJ_E,        // 5
+    EMERGENCY_STOP_E,   // 6
+    PLAN_GLOBAL_TRAJ_E // 7
   };
 
   /** @brief StateToString interprets the input server state **/
@@ -81,12 +199,12 @@ private:
       switch (state)
       {
           case ServerState::INIT:   return "INIT";
-          case ServerState::WAIT_TARGET:   return "WAIT_TARGET";
-          case ServerState::GEN_NEW_TRAJ:   return "GEN_NEW_TRAJ";
-          case ServerState::REPLAN_TRAJ: return "REPLAN_TRAJ";
+          case ServerState::READY:   return "READY";
+          case ServerState::PLAN_NEW_GLOBAL_TRAJ:   return "PLAN_NEW_GLOBAL_TRAJ";
+          case ServerState::PLAN_LOCAL_TRAJ: return "PLAN_LOCAL_TRAJ";
           case ServerState::EXEC_TRAJ:   return "EXEC_TRAJ";
           case ServerState::EMERGENCY_STOP:   return "EMERGENCY_STOP";
-          case ServerState::SEQUENTIAL_START:   return "SEQUENTIAL_START";
+          case ServerState::PLAN_GLOBAL_TRAJ:   return "PLAN_GLOBAL_TRAJ";
           default:      return "[Unknown State]";
       }
   }
@@ -96,12 +214,12 @@ private:
   {
       switch (event)
       {
-          case ServerEvent::WAIT_TARGET_E:   return "WAIT_TARGET_E";
-          case ServerEvent::GEN_NEW_TRAJ_E: return "GEN_NEW_TRAJ_E";
-          case ServerEvent::REPLAN_TRAJ_E:   return "REPLAN_TRAJ_E";
+          case ServerEvent::READY_E:   return "READY_E";
+          case ServerEvent::PLAN_NEW_GLOBAL_TRAJ_E: return "PLAN_NEW_GLOBAL_TRAJ_E";
+          case ServerEvent::PLAN_LOCAL_TRAJ_E:   return "PLAN_LOCAL_TRAJ_E";
           case ServerEvent::EXEC_TRAJ_E:   return "EXEC_TRAJ_E";
           case ServerEvent::EMERGENCY_STOP_E:   return "EMERGENCY_STOP_E";
-          case ServerEvent::SEQUENTIAL_START_E:   return "SEQUENTIAL_START_E";
+          case ServerEvent::PLAN_GLOBAL_TRAJ_E:   return "PLAN_GLOBAL_TRAJ_E";
           case ServerEvent::EMPTY_E:   return "EMPTY_E";
           default:      return "[Unknown Event]";
       }
@@ -123,24 +241,20 @@ private:
 
   int target_type_; // If value is 1, the goal is manually defined via a subscribed topic, else if 2, the goal is defined via pre-defined waypoints 
 
-  // Min/max(?) distance not to replan
-  double no_replan_thresh_;
-  // Timeout for replanning to occur
-  double replan_thresh_;
-  double waypoints_[50][3];
-  int form_num_;
-  Eigen::MatrixXd formation_;
-
-  // Total number of waypoints
-  int waypoint_num_;
-  // ID of next waypoint currently being planned to
-  int wpt_id_;
+  
+  double min_replan_dist_; // Min distance to replan
+  double replan_time_thresh_; // Timeout for replanning to occur
+  
+  // Waypoints
+  Waypoint waypoints_; // Waypoint handler object
+  Eigen::Vector3d formation_pos_; // Position of drone relative to formation origin
 
   // Max planning distance for the local target
   double planning_horizen_;
-  double emergency_time_;
-  bool enable_fail_safe_;
-  bool flag_escape_emergency_;
+  double emergency_time_; // Threshold time to deal with potential collision
+  bool enable_fail_safe_; 
+  bool flag_escape_emergency_; // Used to prevent repeated execution of estop functions
+  bool potential_agent_collision_{false}; // Indicates potential collision with other agents in the near future
 
   // Indicates that all agents within a swarm have a provided trajectory
   bool have_recv_pre_agent_; 
@@ -154,11 +268,6 @@ private:
   Eigen::Vector3d local_target_pt_, local_target_vel_; // local target state
   Eigen::Vector3d odom_pos_, odom_vel_, odom_acc_;     // odometry state
 
-  // List of waypoints
-  std::vector<Eigen::Vector3d> wps_;
-  Eigen::Vector3d formation_start_;
-  Eigen::Vector3d formation_pos_;
-
   // Count number of FSM exec iterations
   int fsm_itr_num{0};
 
@@ -171,12 +280,11 @@ private:
 
   ros::Subscriber waypoint_sub_, odom_sub_, trigger_sub_, broadcast_ploytraj_sub_, mandatory_stop_sub_;
   ros::Subscriber waypoints_sub_;
-  ros::Publisher poly_traj_pub_, data_disp_pub_, broadcast_ploytraj_pub_, heartbeat_pub_, ground_height_pub_;
+  ros::Publisher poly_traj_pub_, broadcast_ploytraj_pub_, heartbeat_pub_, ground_height_pub_;
 
   /* planning utils */
   EGOPlannerManager::Ptr planner_manager_;
   PlanningVisualization::Ptr visualization_;
-  traj_utils::DataDisp data_disp_;
 
 private: 
 
@@ -243,7 +351,7 @@ private:
    * @param next_wp 
    * @param previous_wp 
    */
-  void planNextWaypoint(const Eigen::Vector3d next_wp, const Eigen::Vector3d previous_wp);
+  void planNextWaypoint(const Eigen::Vector3d previous_wp, const Eigen::Vector3d next_wp);
 
   /**
    * @brief Check if goal is reached and replanning is required
@@ -251,10 +359,6 @@ private:
    * @return std::pair<bool,bool> 
    */
   std::pair<bool,bool> isGoalReachedAndReplanNeeded();
-
-  /**
-   * 
-   */
 
   /**
    * @brief Perform the following checks
@@ -265,6 +369,11 @@ private:
    * @return ServerEvent 
    */
   ServerEvent safetyChecks();
+
+
+  bool checkSensorTimeout();
+  bool checkGroundHeight();
+  bool checkTrajectoryClearance();
 
   /* Subscriber callbacks */
 
@@ -354,8 +463,7 @@ private:
 
   void setServerEvent(ServerEvent event)
   {
-    logInfo(string_format("Set server event: %s", EventToString(event).c_str()));
-
+    // logInfo(string_format("Set server event: %s", EventToString(event).c_str()));
     server_event_ = event;
   }
 
@@ -367,8 +475,6 @@ private:
 
     return event;
   }
-
-
 
 private:
 

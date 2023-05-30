@@ -19,7 +19,7 @@ void TrajServer::init(ros::NodeHandle& nh)
   nh.param("traj_server/pub_cmd_freq", pub_cmd_freq_, 25.0);
   nh.param("traj_server/state_machine_tick_freq", sm_tick_freq_, 50.0);
   double server_state_pub_freq;
-  nh.param("traj_server/server_state_pub_freq", server_state_pub_freq, 1.0);
+  nh.param("traj_server/server_state_pub_freq", server_state_pub_freq, 5.0);
 
   /* Subscribers */
   poly_traj_sub_ = nh.subscribe("planning/trajectory", 10, &TrajServer::polyTrajCallback, this);
@@ -174,7 +174,7 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
       }
       else {
         if (isPlannerHeartbeatTimeout()){
-          logError("[traj_server] Lost heartbeat from the planner, is he dead?");
+          logErrorThrottled("[traj_server] Lost heartbeat from the planner.", 1.0);
           execHover();
         }
 
@@ -705,7 +705,7 @@ ServerState TrajServer::getServerState()
 
 void TrajServer::setServerEvent(ServerEvent event)
 {
-  logInfo(string_format("Set server event: %s", EventToString(event).c_str()));
+  // logInfo(string_format("Set server event: %s", EventToString(event).c_str()));
 
   server_event_ = event;
 }

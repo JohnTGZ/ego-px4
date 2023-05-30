@@ -244,8 +244,9 @@ namespace ego_planner
   {
 
     static int count = 0;
-    printf("\033[47;30m\n[drone %d replan %d]==============================================\033[0m\n",
-           pp_.drone_id, count++);
+    // TODO_0 Uncomment
+    // printf("\033[47;30m\n[drone %d replan %d]==============================================\033[0m\n",
+    //        pp_.drone_id, count++);
     // cout.precision(3);
     // cout << "start: " << start_pt.transpose() << ", " << start_vel.transpose() << "\ngoal:" << local_target_pt.transpose() << ", " << local_target_vel.transpose()
     //      << endl;
@@ -254,8 +255,9 @@ namespace ego_planner
     ploy_traj_opt_->setFStartFEnd(formation_start_pt, formation_end_pt);
 
     if ((start_pt - local_target_pt).norm() < 0.2)
-    {
-      cout << "Close to goal" << endl;
+    { 
+      // TODO_0 Uncomment
+      // cout << "Close to goal" << endl;
       // continous_failures_count_++;
       // return false;
     }
@@ -365,7 +367,9 @@ namespace ego_planner
     }
 
     // // save and display planned results
-    cout << "plan_success=" << flag_success << endl;
+
+    // TODO_0: Uncomment
+    // cout << "plan_success=" << flag_success << endl;
     if (!flag_success)
     {
       visualization_->displayFailedList(cstr_pts, 0);
