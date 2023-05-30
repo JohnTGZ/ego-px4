@@ -5,12 +5,10 @@ namespace ego_planner
 {
   void EGOReplanFSM::init(ros::NodeHandle &nh)
   {
-    current_state_ = FSM_EXEC_STATE::INIT;
     have_target_ = false;
     have_odom_ = false;
     have_recv_pre_agent_ = false;
     flag_escape_emergency_ = true;
-    mandatory_stop_ = false;
 
     /* initialize main modules */
     visualization_.reset(new PlanningVisualization(nh));
@@ -31,8 +29,8 @@ namespace ego_planner
 
     /*  fsm param  */
     nh.param("fsm/flight_type", target_type_, -1);
-    nh.param("fsm/thresh_replan_time", replan_thresh_, -1.0);
-    nh.param("fsm/thresh_no_replan_meter", no_replan_thresh_, -1.0);
+    nh.param("fsm/thresh_replan_time", replan_time_thresh_, -1.0);
+    nh.param("fsm/thresh_no_replan_meter", min_replan_dist_, -1.0);
     nh.param("fsm/planning_horizon", planning_horizen_, -1.0);
     nh.param("fsm/emergency_time", emergency_time_, 1.0);
     nh.param("fsm/fail_safe", enable_fail_safe_, true);
@@ -48,11 +46,14 @@ namespace ego_planner
     nh.getParam("formation/drone" + to_string(planner_manager_->pp_.drone_id), pos);
     formation_pos_ << pos[0], pos[1], pos[2];
     nh.getParam("formation/start", pos);
-    formation_start_ << pos[0], pos[1], pos[2];
+
+    Eigen::Vector3d formation_start;
+    formation_start << pos[0], pos[1], pos[2];
+    waypoints_.setStartWP(formation_start);
 
     /* Timer callbacks */
-    exec_timer_ = nh.createTimer(ros::Duration(0.01), &EGOReplanFSM::execFSMCallback, this);
-    safety_timer_ = nh.createTimer(ros::Duration(0.05), &EGOReplanFSM::checkCollisionCallback, this);
+    tick_state_timer_ = nh.createTimer(ros::Duration(0.01), &EGOReplanFSM::tickStateTimerCB, this);
+    exec_state_timer_ = nh.createTimer(ros::Duration(0.05), &EGOReplanFSM::execStateTimerCB, this);
 
     /* Subscribers */
     odom_sub_ = nh.subscribe("odom_world", 1, &EGOReplanFSM::odometryCallback, this);
@@ -69,11 +70,9 @@ namespace ego_planner
     /* Publishers */
     broadcast_ploytraj_pub_ = nh.advertise<traj_utils::MINCOTraj>("planning/broadcast_traj_send", 10);
     poly_traj_pub_ = nh.advertise<traj_utils::PolyTraj>("planning/trajectory", 10);
-    data_disp_pub_ = nh.advertise<traj_utils::DataDisp>("planning/data_display", 100);
     heartbeat_pub_ = nh.advertise<std_msgs::Empty>("planning/heartbeat", 10);
     ground_height_pub_ = nh.advertise<std_msgs::Float64>("/ground_height_measurement", 10);
 
-    have_trigger_ = true;
 
     if (target_type_ == TARGET_TYPE::MANUAL_TARGET)
     {
@@ -87,15 +86,15 @@ namespace ego_planner
     else{
       logError(string_format("Wrong target_type_ value! target_type_=%i", target_type_));
     }
-
   }
 
   /**
    * Timer Callbacks
   */
-  // Timer callback to update FSM state
-  void EGOReplanFSM::execFSMCallback(const ros::TimerEvent &e)
+
+  void EGOReplanFSM::tickStateTimerCB(const ros::TimerEvent &e)
   {
+    // logInfoThrottled(string_format("Current State: [%s]", StateToString(getServerState()).c_str()), 1.0);
     std_msgs::Empty heartbeat_msg;
     heartbeat_pub_.publish(heartbeat_msg);
 
@@ -106,74 +105,74 @@ namespace ego_planner
       printFSMExecState();
     }
 
-    switch (current_state_)
+    switch (getServerState())
     {
       case INIT:
       {
-        if (!have_odom_)
+        switch (getServerEvent())
         {
-          return;
-        }
-        changeFSMExecState(WAIT_TARGET, "FSM");
-        break;
-      }
-
-      case WAIT_TARGET: // Wait for target or trigger
-      {
-        if (!have_target_ || !have_trigger_){
-          return;
-        }
-        else
-        {
-          changeFSMExecState(SEQUENTIAL_START, "FSM");
+          case READY_E:
+            setServerState(ServerState::READY);
+            break;
+          case EMERGENCY_STOP_E:
+            logFatal("EMERGENCY STOP ACTIVATED!");
+            setServerState(ServerState::EMERGENCY_STOP);
+            break;
+          default:
+            break;
         }
         break;
       }
 
-      case SEQUENTIAL_START: // for swarm or single drone with drone_id = 0
+      case READY: 
       {
-        if (planner_manager_->pp_.drone_id <= 0 || (planner_manager_->pp_.drone_id >= 1 && have_recv_pre_agent_))
+        switch (getServerEvent())
         {
-          bool success = planFromGlobalTraj(10); // zx-todo
-          if (success)
-          {
-            changeFSMExecState(EXEC_TRAJ, "FSM");
-          }
-          else
-          {
-            logError("Failed to generate the first trajectory!!!");
-            changeFSMExecState(SEQUENTIAL_START, "FSM"); // "changeFSMExecState" must be called each time planned
-          }
+          case PLAN_GLOBAL_TRAJ_E:
+            setServerState(ServerState::PLAN_GLOBAL_TRAJ);
+            break;
+          case EMERGENCY_STOP_E:
+            logFatal("EMERGENCY STOP ACTIVATED!");
+            setServerState(ServerState::EMERGENCY_STOP);
+            break;
+          default:
+            break;
+        }
+        break;
+      }
+
+      case PLAN_GLOBAL_TRAJ: 
+      {
+        switch (getServerEvent())
+        {
+          case EXEC_TRAJ_E:
+            setServerState(ServerState::EXEC_TRAJ);
+            break;
+          case EMERGENCY_STOP_E:
+            logFatal("EMERGENCY STOP ACTIVATED!");
+            setServerState(ServerState::EMERGENCY_STOP);
+            break;
+          default:
+            break;
         }
 
         break;
       }
 
-      case GEN_NEW_TRAJ:
+      case PLAN_LOCAL_TRAJ:
       {
-        // Try 10 times
-        bool success = planFromGlobalTraj(10); // zx-todo
-        if (success)
-        {
-          changeFSMExecState(EXEC_TRAJ, "FSM");
-          flag_escape_emergency_ = true;
-        }
-        else
-        {
-          changeFSMExecState(GEN_NEW_TRAJ, "FSM"); // "changeFSMExecState" must be called each time planned
-        }
-        break;
-      }
 
-      case REPLAN_TRAJ:
-      {
-        if (planFromLocalTraj(1))
+        switch (getServerEvent())
         {
-          changeFSMExecState(EXEC_TRAJ, "FSM");
-        }
-        else
-        {
-          changeFSMExecState(REPLAN_TRAJ, "FSM");
+          case EXEC_TRAJ_E:
+            setServerState(ServerState::EXEC_TRAJ);
+            break;
+          case EMERGENCY_STOP_E:
+            logFatal("EMERGENCY STOP ACTIVATED!");
+            setServerState(ServerState::EMERGENCY_STOP);
+            break;
+          default:
+            break;
         }
 
         break;
@@ -181,18 +180,39 @@ namespace ego_planner
 
       case EXEC_TRAJ:
       {
-        std::pair<bool,bool> GoalReachedAndReplanNeededCheck = isGoalReachedAndReplanNeeded();
+        switch (getServerEvent())
+        {
+          case READY_E:
+            setServerState(ServerState::READY);
+            break;
+          case PLAN_LOCAL_TRAJ_E:
+            setServerState(ServerState::PLAN_LOCAL_TRAJ);
+            break;
+          case EMERGENCY_STOP_E:
+            logFatal("EMERGENCY STOP ACTIVATED!");
+            setServerState(ServerState::EMERGENCY_STOP);
+            break;
+          default:
+            break;
+        }
 
-        if (GoalReachedAndReplanNeededCheck.first) {
-          /* The navigation task completed */
-          changeFSMExecState(WAIT_TARGET, "FSM");
-        }
-        else if (GoalReachedAndReplanNeededCheck.second) {
-          /* Replanning trajectory needed */
-          changeFSMExecState(REPLAN_TRAJ, "FSM");
-        }
-        else {
-          /* Do nothing */
+        break;
+      }
+
+
+      case PLAN_NEW_GLOBAL_TRAJ:
+      {
+        switch (getServerEvent())
+        {
+          case EXEC_TRAJ_E:
+            setServerState(ServerState::EXEC_TRAJ);
+            break;
+          case EMERGENCY_STOP_E:
+            logFatal("EMERGENCY STOP ACTIVATED!");
+            setServerState(ServerState::EMERGENCY_STOP);
+            break;
+          default:
+            break;
         }
 
         break;
@@ -200,228 +220,143 @@ namespace ego_planner
 
       case EMERGENCY_STOP:
       {
-        if (flag_escape_emergency_) // Avoiding repeated calls
+        // Do nothing, vehicle requires restarting
+        break;
+      }
+    }
+  }
+
+  void EGOReplanFSM::execStateTimerCB(const ros::TimerEvent &e){
+    switch (getServerState())
+    {
+      case INIT:
+      {
+        if (have_odom_){
+          setServerEvent(READY_E);
+        }
+        break;
+      }
+
+      case READY: 
+      {
+        if (have_target_) {
+          setServerEvent(PLAN_GLOBAL_TRAJ_E);
+        }
+        break;
+      }
+
+      case PLAN_GLOBAL_TRAJ: 
+      {
+        // If first drone or it has received the trajectory of the previous agent.
+        if (planner_manager_->pp_.drone_id <= 0 || (planner_manager_->pp_.drone_id >= 1 && have_recv_pre_agent_))
+        {
+          if (planFromGlobalTraj(10))
+          {
+            setServerEvent(EXEC_TRAJ_E);
+          }
+          else
+          {
+            logError("Failed to generate the first global trajectory! Retrying.");
+          }
+        }
+
+        break;
+      }
+
+      case PLAN_LOCAL_TRAJ:
+      {
+        if (planFromLocalTraj(1))
+        {
+          setServerEvent(EXEC_TRAJ_E);
+        }
+        else 
+        {
+          logError(string_format("Replan failed upon detecting potential collision"));
+          if (potential_agent_collision_)
+          {
+            logError(string_format("Potential agent collision detected, activating ESTOP"));
+            setServerEvent(EMERGENCY_STOP_E);
+          }
+        }
+
+        break;
+      }
+
+      case EXEC_TRAJ:
+      {
+        if (checkSensorTimeout())
+        {
+          setServerEvent(EMERGENCY_STOP_E);
+          break;
+        }
+
+        if (checkTrajectoryClearance())
+        {
+          logInfo(string_format("Replanning to avoid collision."));
+          setServerEvent(PLAN_LOCAL_TRAJ_E);
+          break;
+        }
+
+        // if (checkGroundHeight){
+        //   setServerEvent(PLAN_LOCAL_TRAJ_E);
+        //   break;
+        // }
+
+        std::pair<bool,bool> GoalReachedAndReplanNeededCheck = isGoalReachedAndReplanNeeded();
+
+        if (GoalReachedAndReplanNeededCheck.first) {
+          logError("Goal reached!");
+          // The navigation task completed 
+          setServerEvent(READY_E);
+          break;
+        }
+        else if (GoalReachedAndReplanNeededCheck.second) {
+          // Replanning trajectory needed (Only checks for itself, not with other drones)
+          setServerEvent(PLAN_LOCAL_TRAJ_E);
+          break;
+        }
+
+        break;
+      }
+
+      case PLAN_NEW_GLOBAL_TRAJ:
+      {
+        if (planFromGlobalTraj(10)) 
+        {
+          setServerEvent(EXEC_TRAJ_E);
+          flag_escape_emergency_ = true; // TODO Refactor
+        }
+
+        break;
+      }
+
+      case EMERGENCY_STOP:
+      {
+        if (flag_escape_emergency_) // Avoiding repeated calls to callEmergencyStop
         {
           callEmergencyStop(odom_pos_);
         }
         else
         {
-          if (enable_fail_safe_ && odom_vel_.norm() < 0.1)
-            changeFSMExecState(GEN_NEW_TRAJ, "FSM");
+          if (enable_fail_safe_ && odom_vel_.norm() < 0.1){
+            setServerEvent(PLAN_NEW_GLOBAL_TRAJ_E);
+          }
         }
 
         flag_escape_emergency_ = false;
         break;
       }
     }
-
-    data_disp_.header.stamp = ros::Time::now();
-    data_disp_pub_.publish(data_disp_);
-  }
-
-  // Checks distance between drones in the swarm
-  void EGOReplanFSM::checkCollisionCallback(const ros::TimerEvent &e)
-  {
-    // check ground height 
-    double height;
-    measureGroundHeight(height);
-
-    LocalTrajData *info = &planner_manager_->traj_.local_traj;
-    auto map = planner_manager_->grid_map_;
-    double t_cur = ros::Time::now().toSec() - info->start_time;
-    PtsChk_t pts_chk = info->pts_chk;
-
-    if (current_state_ == WAIT_TARGET || info->traj_id <= 0)
-      return;
-
-    /* ---------- check lost of depth ---------- */
-    if (map->getOdomDepthTimeout())
-    {
-      logError("Depth Lost! EMERGENCY_STOP");
-      enable_fail_safe_ = false;
-      changeFSMExecState(EMERGENCY_STOP, "SAFETY");
-    }
-
-    // bool close_to_the_end_of_safe_segment = (pts_chk.back().back().first - t_cur) < emergency_time_;
-    // // bool close_to_goal = (info->traj.getPos(info->duration) - end_pt_).norm() < 1e-5;
-    // if (close_to_the_end_of_safe_segment)
-    // {
-    //   changeFSMExecState(REPLAN_TRAJ, "SAFETY");
-    //   return;
-
-    //   // if (!close_to_goal)
-    //   // {
-    //   //   // logInfo("current position is close to the safe segment end.");
-    //   //   changeFSMExecState(REPLAN_TRAJ, "SAFETY");
-    //   //   return;
-    //   // }
-    //   // else
-    //   // {
-    //   //   double t_step = map->getResolution() / planner_manager_->pp_.max_vel_;
-    //   //   for (double t = pts_chk.back().back().first; t < info->duration; t += t_step)
-    //   //   {
-    //   //     if (map->getInflateOccupancy(info->traj.getPos(t)))
-    //   //     {
-    //   //       if ((odom_pos_ - end_pt_).norm() < no_replan_thresh_)
-    //   //       {
-    //   //         logError("Dense obstacles close to the goal, stop planning.");
-    //   //         callEmergencyStop(odom_pos_);
-    //   //         have_target_ = false;
-    //   //         changeFSMExecState(WAIT_TARGET, "SAFETY");
-    //   //         return;
-    //   //       }
-    //   //       else
-    //   //       {
-    //   //         changeFSMExecState(REPLAN_TRAJ, "SAFETY");
-    //   //         return;
-    //   //       }
-    //   //     }
-    //   //   }
-    //   // }
-    // }
-
-    /* ---------- check trajectory ---------- */
-    const double CLEARANCE = 0.8 * planner_manager_->getSwarmClearance();
-    auto id_ratio = info->traj.locatePieceIdxWithRatio(t_cur);
-
-    // cout << "t_cur=" << t_cur << " info->duration=" << info->duration << endl;
-
-    size_t i_start = floor((id_ratio.first + id_ratio.second) * planner_manager_->getCpsNumPrePiece());
-    if (i_start >= pts_chk.size())
-    {
-      // logError("i_start >= pts_chk.size()");
-      return;
-    }
-    size_t j_start = 0;
-    // cout << "i_start=" << i_start << " pts_chk.size()=" << pts_chk.size() << " pts_chk[i_start].size()=" << pts_chk[i_start].size() << endl;
-    for (; i_start < pts_chk.size(); ++i_start)
-    {
-      for (j_start = 0; j_start < pts_chk[i_start].size(); ++j_start)
-      {
-        if (pts_chk[i_start][j_start].first > t_cur)
-        {
-          goto find_ij_start;
-        }
-      }
-    }
-  find_ij_start:;
-
-    // Eigen::Vector3d last_pt = pts_chk[0][0].second;
-    // for (size_t i = 0; i < pts_chk.size(); ++i)
-    // {
-    //   cout << "--------------------" << endl;
-    //   for (size_t j = 0; j < pts_chk[i].size(); ++j)
-    //   {
-    //     cout << pts_chk[i][j].first << " @ " << pts_chk[i][j].second.transpose() << " @ " << (pts_chk[i][j].second - last_pt).transpose() << " @ " << map->getInflateOccupancy(pts_chk[i][j].second) << endl;
-    //     last_pt = pts_chk[i][j].second;
-    //   }
-    // }
-
-    // cout << "pts_chk[i_start][j_start].first - t_cur = " << pts_chk[i_start][j_start].first - t_cur << endl;
-    // cout << "devi = " << (pts_chk[i_start][j_start].second - info->traj.getPos(t_cur)).transpose() << endl;
-
-    // cout << "pts_chk.size()=" << pts_chk.size() << " i_start=" << i_start << endl;
-    // Eigen::Vector3d p_last = pts_chk[i_start][j_start].second;
-    const bool touch_the_end = ((local_target_pt_ - end_pt_).norm() < 1e-2);
-    size_t i_end = touch_the_end ? pts_chk.size() : pts_chk.size() * 3 / 4;
-    for (size_t i = i_start; i < i_end; ++i)
-    {
-      for (size_t j = j_start; j < pts_chk[i].size(); ++j)
-      {
-
-        double t = pts_chk[i][j].first;
-        Eigen::Vector3d p = pts_chk[i][j].second;
-        // if ( (p - p_last).cwiseAbs().maxCoeff() > planner_manager_->grid_map_->getResolution() * 1.05 )
-        // {
-        //   logError("BBBBBBBBBBBBBBBBBBBBBBBBBBB");
-        //   cout << "p=" << p.transpose() << " p_last=" << p_last.transpose() << " dist=" << (p - p_last).cwiseAbs().maxCoeff() << endl;
-        // }
-        // p_last = p;
-
-        // cout << "t=" << t << " @ "
-        //      << "p=" << p.transpose() << endl;
-        // If t_cur < t_2_3, only the first 2/3 partition of the trajectory is considered valid and will get checked.
-        // if (t_cur < t_2_3 && t >= t_2_3)
-        //   break;
-
-        bool occ = false;
-        occ |= map->getInflateOccupancy(p);
-
-        // cout << "p=" << p.transpose() << endl;
-
-        // if (occ)
-        // {
-        //   logWarn("AAAAAAAAAAAAAAAAAAA");
-        //   cout << "pts_chk[i_start].size()=" << pts_chk[i_start].size() << endl;
-        //   cout << "i=" << i << " j=" << j << " i_start=" << i_start << " j_start=" << j_start << endl;
-        //   cout << "pts_chk.size()=" << pts_chk.size() << endl;
-        //   cout << "t=" << t << endl;
-        //   cout << "from t=" << info->traj.getPos(t).transpose() << endl;
-        //   cout << "from rec=" << p.transpose() << endl;
-        // }
-
-        for (size_t id = 0; id < planner_manager_->traj_.swarm_traj.size(); id++)
-        {
-          if ((planner_manager_->traj_.swarm_traj.at(id).drone_id != (int)id) ||
-              (planner_manager_->traj_.swarm_traj.at(id).drone_id == planner_manager_->pp_.drone_id))
-          {
-            continue;
-          }
-
-          double t_X = t - (info->start_time - planner_manager_->traj_.swarm_traj.at(id).start_time);
-          if (t_X > 0 && t_X < planner_manager_->traj_.swarm_traj.at(id).duration)
-          {
-            Eigen::Vector3d swarm_pridicted = planner_manager_->traj_.swarm_traj.at(id).traj.getPos(t_X);
-            double dist = (p - swarm_pridicted).norm();
-
-            if (dist < CLEARANCE)
-            {
-              logWarn(string_format("swarm distance between drone %d and drone %d is %f, too close!",
-                       planner_manager_->pp_.drone_id, (int)id, dist));
-              occ = true;
-              break;
-            }
-          }
-        }
-
-        if (occ)
-        {
-          /* Handle the collided case immediately */
-          if (planFromLocalTraj()) // Make a chance
-          {
-            logInfo(string_format("Plan success when detect collision. %f", t / info->duration));
-            changeFSMExecState(EXEC_TRAJ, "SAFETY");
-            return;
-          }
-          else
-          {
-            if (t - t_cur < emergency_time_) // 0.8s of emergency time
-            {
-              logWarn(string_format("Emergency stop! time=%f", t - t_cur));
-              changeFSMExecState(EMERGENCY_STOP, "SAFETY");
-            }
-            else
-            {
-              logWarn("current traj in collision, replan.");
-              changeFSMExecState(REPLAN_TRAJ, "SAFETY");
-            }
-            return;
-          }
-          break;
-        }
-      }
-      j_start = 0;
-    }
   }
 
   /**
    * Subscriber Callbacks
   */
+
   void EGOReplanFSM::mandatoryStopCallback(const std_msgs::Empty &msg)
   {
-    mandatory_stop_ = true;
     logError("Received a mandatory stop command!");
-    changeFSMExecState(EMERGENCY_STOP, "Mandatory Stop");
+    setServerEvent(EMERGENCY_STOP_E);
     enable_fail_safe_ = false;
   }
 
@@ -554,7 +489,9 @@ namespace ego_planner
     /* Check Collision */
     if (planner_manager_->checkCollision(recv_id))
     {
-      changeFSMExecState(REPLAN_TRAJ, "SWARM_CHECK");
+      logError(string_format("Imminent COLLISION between ownself and drone %d", recv_id));
+      // TODO: What state is it expected to be in? EXEC_TRAJ?
+      setServerState(PLAN_LOCAL_TRAJ);
     }
 
     /* Check if receive agents have lower drone id */
@@ -579,29 +516,23 @@ namespace ego_planner
 
   void EGOReplanFSM::waypointCallback(const geometry_msgs::PoseStampedPtr &msg)
   {
-    if (msg->pose.position.z < -0.1)
-      return;
-
-    // TODO: Refactor receiving of wayopints into a standardized function
-    
-    Eigen::Vector3d next_wp(
+    Eigen::Vector3d wp(
       msg->pose.position.x + world_to_uav_origin_tf_.position.x, 
       msg->pose.position.y + world_to_uav_origin_tf_.position.y, 
       1.0 + world_to_uav_origin_tf_.position.z);
     
-    // Add latest waypoint to waypoint list
-    wps_.push_back(next_wp);
-    // Set waypoint id as the latest one
-    wpt_id_ = wps_.size() - 1;
+    waypoints_.reset();
+
+    waypoints_.addWP(wp);
+
     // If there are at least 2 waypoints,
-    if (wpt_id_ >= 1)
+    if (waypoints_.getSize() >= 2)
     {
-      // Set the formation_start to be second last waypoint 
-      formation_start_ = wps_[wpt_id_ - 1];
+      // Set the starting wp to be second last waypoint 
+      waypoints_.setStartWP(waypoints_.getWP(waypoints_.getSize() - 2));
     }
 
-    // Plan from formation_start_ to final waypoint
-    planNextWaypoint(wps_[wpt_id_], formation_start_);
+    planNextWaypoint(waypoints_.getStartWP(), waypoints_.getLast());
   }
 
   void EGOReplanFSM::waypointsCB(const trajectory_server_msgs::WaypointsPtr &msg)
@@ -622,34 +553,31 @@ namespace ego_planner
       return;
     }
 
-    waypoint_num_ = msg->waypoints.poses.size();
+    waypoints_.reset();
 
-    wps_.clear();
     // Transform received waypoints from world to UAV origin frame
     for (auto pose : msg->waypoints.poses) {
-      wps_.push_back(Eigen::Vector3d{
+      waypoints_.addWP(Eigen::Vector3d{
         pose.position.x + world_to_uav_origin_tf_.position.x,
         pose.position.y + world_to_uav_origin_tf_.position.y,
         pose.position.z + world_to_uav_origin_tf_.position.z
       });
     }
 
-    for (size_t i = 0; i < wps_.size(); i++)
+    for (size_t i = 0; i < waypoints_.getSize(); i++)
     {
-      visualization_->displayGoalPoint(wps_[i], Eigen::Vector4d(0, 0.5, 0.5, 1), 0.3, i);
+      visualization_->displayGoalPoint(waypoints_.getWP(i), Eigen::Vector4d(0, 0.5, 0.5, 1), 0.3, i);
       ros::Duration(0.001).sleep();
     }
 
-    // plan first global waypoint
-    wpt_id_ = 0;
-    // Plan from formation_start_ to first waypoint
-    planNextWaypoint(wps_[wpt_id_], formation_start_);
+    planNextWaypoint(waypoints_.getStartWP(), waypoints_.getNextWP());
   }
 
   /**
    * Planning Methods
   */
-  bool EGOReplanFSM::planFromGlobalTraj(const int trial_times /*=1*/) //zx-todo
+
+  bool EGOReplanFSM::planFromGlobalTraj(const int trial_times /*=1*/) 
   {
 
     start_pt_ = odom_pos_;
@@ -702,21 +630,20 @@ namespace ego_planner
     return true;
   }
 
-  // Plans a path using planner_manager_ methods
   bool EGOReplanFSM::callReboundReplan(bool flag_use_poly_init, bool flag_randomPolyTraj)
   {
-
+    // Get local target position and velocity 
     planner_manager_->getLocalTarget(
         planning_horizen_, start_pt_, end_pt_,
         local_target_pt_, local_target_vel_,
         touch_goal_);
 
-    // replan from 'formation_start_' to 'wps_[wpt_id_]'
     bool plan_success = planner_manager_->reboundReplan(
         start_pt_, start_vel_, 
         start_acc_, local_target_pt_, 
-        local_target_vel_, formation_start_, 
-        wps_[wpt_id_], (have_new_target_ || flag_use_poly_init),
+        local_target_vel_, 
+        waypoints_.getStartWP(), waypoints_.getNextWP(), 
+        (have_new_target_ || flag_use_poly_init),
         flag_randomPolyTraj, touch_goal_);
 
     have_new_target_ = false;
@@ -729,6 +656,8 @@ namespace ego_planner
 
       polyTraj2ROSMsg(poly_msg, MINCO_msg);
 
+      transformMINCOTrajectoryToWorld(MINCO_msg);
+
       poly_traj_pub_.publish(poly_msg); // Publish to corresponding drone for execution
       broadcast_ploytraj_pub_.publish(MINCO_msg); // Broadcast to all other drones for replanning to optimize in avoiding swarm collision
     }
@@ -736,28 +665,23 @@ namespace ego_planner
     return plan_success;
   }
 
-  // Plan from current odom position to next waypoint given the direction vector of next and prev wp
-  // This is done by calling planGlobalTrajWaypoints
-  // And publishing this to "global_list"
-  void EGOReplanFSM::planNextWaypoint(const Eigen::Vector3d next_wp, const Eigen::Vector3d previous_wp)
+  void EGOReplanFSM::planNextWaypoint(const Eigen::Vector3d previous_wp, const Eigen::Vector3d next_wp)
   {
-
     Eigen::Vector3d dir = (next_wp - previous_wp).normalized();
     // Offset end_pt_ by the formation position
     end_pt_ = next_wp + Eigen::Vector3d(dir(0) * formation_pos_(0) - dir(1) * formation_pos_(1),
                                         dir(1) * formation_pos_(0) + dir(0) * formation_pos_(1),
                                         formation_pos_(2));
 
-    bool success = false;
     std::vector<Eigen::Vector3d> one_pt_wps;
     one_pt_wps.push_back(end_pt_);
-    success = planner_manager_->planGlobalTrajWaypoints(
+    bool plan_success = planner_manager_->planGlobalTrajWaypoints(
         odom_pos_, Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero(),
         one_pt_wps, Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero());
 
     visualization_->displayGoalPoint(next_wp, Eigen::Vector4d(0, 0.5, 0.5, 1), 0.3, 0);
 
-    if (success)
+    if (plan_success)
     {
       /*** display ***/
       constexpr double step_size_t = 0.1;
@@ -771,17 +695,20 @@ namespace ego_planner
 
       have_target_ = true;
       have_new_target_ = true;
-      // have_trigger_ = true;
 
+      // TODO Refactor
       /*** FSM ***/
-      if (current_state_ != WAIT_TARGET)
+      if (getServerState() != READY)
       {
-        while (current_state_ != EXEC_TRAJ)
+        // If already executing a trajectory then wait for it to finish
+        // Wait for Server to enter execute trajectory phase
+        while (getServerState() != EXEC_TRAJ)
         {
           ros::spinOnce();
           ros::Duration(0.001).sleep();
         }
-        changeFSMExecState(REPLAN_TRAJ, "TRIG");
+        // If not in READY state, Go to PLAN_LOCAL_TRAJ
+        setServerEvent(PLAN_LOCAL_TRAJ_E);
       }
 
       // visualization_->displayGoalPoint(end_pt_, Eigen::Vector4d(1, 0, 0, 1), 0.3, 0);
@@ -793,6 +720,8 @@ namespace ego_planner
     }
   }
 
+  /* Checking methods */
+
   std::pair<bool,bool> EGOReplanFSM::isGoalReachedAndReplanNeeded(){
     // boolean values to denote current state of plan execution
     bool goal_reached{false}, replan_needed{false};
@@ -802,179 +731,222 @@ namespace ego_planner
     double t_cur = ros::Time::now().toSec() - info->start_time;
     t_cur = min(info->duration, t_cur);
 
-    // TODO: use actual position 
     // Get position at current time
     Eigen::Vector3d pos = info->traj.getPos(t_cur);
+    // TODO: Try using actual position 
+    // Eigen::Vector3d pos = odom_pos_;
 
-    // Local target point and final goal is close enough
-    bool touch_the_goal = ((local_target_pt_ - end_pt_).norm() < 1e-2);
+    // Local target is within tolerance of the goal point
+    bool within_goal_tol = ((local_target_pt_ - end_pt_).norm() < 1e-2);
+    // Below the threshold to trigger replanning
+    bool no_replan_dist = (end_pt_ - pos).norm() < min_replan_dist_;
+    // Exceeded timeout to replan
+    bool replan_time_exceeded = t_cur > replan_time_thresh_ ;
 
-    //TODO remove target_type_ == TARGET_TYPE::PRESET_TARGET condition 
-    // so that there is no difference between manually provided goals and waypoints
-
-    // SAME STATE: Plan next waypoint if:
-    // 1. current waypoint id is not the last waypoint
-    // 2. distance between current pos and end point is below no_replan_thresh_ 
-    if ((target_type_ == TARGET_TYPE::PRESET_TARGET) &&
-        (wpt_id_ < waypoint_num_ - 1) &&
-        (end_pt_ - pos).norm() < no_replan_thresh_)
+    if (target_type_ == TARGET_TYPE::PRESET_TARGET) 
     {
-      formation_start_ = wps_[wpt_id_];
-      wpt_id_++;
-      planNextWaypoint(wps_[wpt_id_], formation_start_);
-    }
-    // GOAL REACHED: local target close to the global target
-    else if ((t_cur > info->duration - 1e-2) && touch_the_goal) 
-    {
-      // Restart the target and trigger
-      have_target_ = false;
-
-      // TODO: Disabled trigger here
-      // have_trigger_ = false;
-
-      if (target_type_ == TARGET_TYPE::PRESET_TARGET)
+      // GOAL Reached and current time exceeded duration
+      if (within_goal_tol && (t_cur > (info->duration - 1e-2)))
       {
-        // Plan from start of formation to first waypoint
-        formation_start_ = wps_[wpt_id_];
-        wpt_id_ = 0;
-        planNextWaypoint(wps_[wpt_id_], formation_start_);
-        // have_trigger_ = false; // must have trigger
+        // Restart the target and trigger
+        have_target_ = false;
+
+        waypoints_.setStartWP(waypoints_.getNextWP());
+        // planNextWaypoint(waypoints_.getStartWP(), waypoints_.getWP(0));
+
+        /* The navigation task completed */
+        goal_reached = true;
+        replan_needed = false;
       }
+      else if (!waypoints_.isFinalWP() && no_replan_dist)
+      { 
+        waypoints_.setStartWP(waypoints_.getNextWP());
+        waypoints_.iterateNextWP();
 
-      /* The navigation task completed */
-      goal_reached = true;
-      replan_needed = false;
-    }
-    // GOAL REACHED if:
-    // 1. distance between current pos and end point is below no_replan_thresh_ 
-    // 2. Goal is inside obstacle 
-    else if ((end_pt_ - pos).norm() < no_replan_thresh_ &&
-              planner_manager_->grid_map_->getInflateOccupancy(end_pt_))
-    {
-      have_target_ = false;
-      have_trigger_ = false;
-      logError("The goal is in obstacles, finish the planning.");
-      callEmergencyStop(odom_pos_);
+        planNextWaypoint(waypoints_.getStartWP(), waypoints_.getNextWP());
 
-      /* The navigation task completed */
-      goal_reached = true;
-      replan_needed = false;
+        goal_reached = false;
+        replan_needed = false;
+      }
+      else if (no_replan_dist 
+              && planner_manager_->grid_map_->getInflateOccupancy(end_pt_))
+      {
+        have_target_ = false;
+
+        logError("The goal is in obstacles, performing an emergency stop.");
+        callEmergencyStop(odom_pos_);
+
+        /* The navigation task completed */
+        goal_reached = true;
+        replan_needed = false;
+      }
+      else if (replan_time_exceeded 
+              || (!within_goal_tol 
+                  && planner_manager_->traj_.local_traj.pts_chk.back().back().first - t_cur < emergency_time_))
+      {
+        goal_reached = false;
+        replan_needed = true;
+      }
     }
-    // REPLAN: if current time elapsed exceeds replan time threshold
-    else if (t_cur > replan_thresh_ ||
-            (!touch_the_goal && planner_manager_->traj_.local_traj.pts_chk.back().back().first - t_cur < emergency_time_))
+    else // Manual Target
     {
-      // Replan trajectory needed
-      goal_reached = false;
-      replan_needed = true;
+      if (within_goal_tol && (t_cur > (info->duration - 1e-2))) 
+      {
+        // Restart the target and trigger
+        have_target_ = false;
+
+        /* The navigation task completed */
+        goal_reached = true;
+        replan_needed = false;
+      }
+      else if (no_replan_dist 
+              && planner_manager_->grid_map_->getInflateOccupancy(end_pt_))
+      {
+        have_target_ = false;
+
+        logError("The goal is in obstacles, performing an emergency stop.");
+        callEmergencyStop(odom_pos_);
+
+        /* The navigation task completed */
+        goal_reached = true;
+        replan_needed = false;
+      }
+      else if (replan_time_exceeded
+              || (!within_goal_tol 
+                  && planner_manager_->traj_.local_traj.pts_chk.back().back().first - t_cur < emergency_time_))
+      {
+        goal_reached = false;
+        replan_needed = true;
+      }
     }
 
     return std::make_pair(goal_reached, replan_needed);
   }
 
-  // std::pair<bool,bool> EGOReplanFSM::isGoalReachedAndReplanNeeded(){
-  //   // boolean values to denote current state of plan execution
-  //   bool goal_reached{false}, replan_needed{false};
+  bool EGOReplanFSM::checkSensorTimeout()
+  {
+    if (planner_manager_->grid_map_->getOdomDepthTimeout())
+    {
+      logError("Depth Image/Pose Timeout! EMERGENCY_STOP");
+      enable_fail_safe_ = false;
+      return true;
+    }
+    return false;
+  }
 
-  //   /* determine if need to replan */
-  //   LocalTrajData *info = &planner_manager_->traj_.local_traj;
-  //   double t_cur = ros::Time::now().toSec() - info->start_time;
-  //   t_cur = min(info->duration, t_cur);
+  bool EGOReplanFSM::checkGroundHeight()
+  {
+    // TODO: Implement ground height checking
+    double height;
+    measureGroundHeight(height);
 
-  //   // Get position at current time
-  //   Eigen::Vector3d pos = info->traj.getPos(t_cur);
+    return false;
+  }
 
-  //   // Local target point and final goal is close enough
-  //   bool touch_the_goal = ((local_target_pt_ - end_pt_).norm() < 1e-2);
+  bool EGOReplanFSM::checkTrajectoryClearance()
+  {
+    LocalTrajData *info = &planner_manager_->traj_.local_traj;
+    
+    if (info->traj_id <= 0){ // Return if no local trajectory yet
+      return false;
+    }
 
-  //   // SAME STATE: Plan next waypoint if:
-  //   // 1. current waypoint id is not the last waypoint
-  //   // 2. distance between current pos and end point is below no_replan_thresh_ 
-  //   if ((target_type_ == TARGET_TYPE::PRESET_TARGET) &&
-  //       (wpt_id_ < waypoint_num_ - 1) &&
-  //       (end_pt_ - pos).norm() < no_replan_thresh_)
-  //   {
-  //     formation_start_ = wps_[wpt_id_];
-  //     wpt_id_++;
-  //     planNextWaypoint(wps_[wpt_id_], formation_start_);
-  //   }
-  //   // GOAL REACHED: local target close to the global target
-  //   else if ((t_cur > info->duration - 1e-2) && touch_the_goal) 
-  //   {
-  //     // Restart the target and trigger
-  //     have_target_ = false;
+    double t_cur = ros::Time::now().toSec() - info->start_time;
+    PtsChk_t pts_chk = info->pts_chk; // Points to use for checking
 
-  //     // TODO: Disabled trigger here
-  //     // have_trigger_ = false;
+    const double CLEARANCE = 0.8 * planner_manager_->getSwarmClearance();
+    auto id_ratio = info->traj.locatePieceIdxWithRatio(t_cur);
+    // cout << "t_cur=" << t_cur << " info->duration=" << info->duration << endl;
+    
+    // i_start is piece index
+    size_t i_start = floor((id_ratio.first + id_ratio.second) * planner_manager_->getCpsNumPrePiece());
 
-  //     if (target_type_ == TARGET_TYPE::PRESET_TARGET)
-  //     {
-  //       // Plan from start of formation to first waypoint
-  //       formation_start_ = wps_[wpt_id_];
-  //       wpt_id_ = 0;
-  //       planNextWaypoint(wps_[wpt_id_], formation_start_);
-  //       // have_trigger_ = false; // must have trigger
-  //     }
+    if (i_start >= pts_chk.size())
+    {
+      // logError("i_start >= pts_chk.size()");
+      return false;
+    }
 
-  //     /* The navigation task completed */
-  //     goal_reached = true;
-  //     replan_needed = false;
-  //   }
-  //   // GOAL REACHED if:
-  //   // 1. distance between current pos and end point is below no_replan_thresh_ 
-  //   // 2. Goal is inside obstacle 
-  //   else if ((end_pt_ - pos).norm() < no_replan_thresh_ &&
-  //             planner_manager_->grid_map_->getInflateOccupancy(end_pt_))
-  //   {
-  //     have_target_ = false;
-  //     have_trigger_ = false;
-  //     logError("The goal is in obstacles, finish the planning.");
-  //     callEmergencyStop(odom_pos_);
+    size_t j_start = 0; // idx of point within constraint piece
+    // cout << "i_start=" << i_start << " pts_chk.size()=" << pts_chk.size() << " pts_chk[i_start].size()=" << pts_chk[i_start].size() << endl;
+    for (; i_start < pts_chk.size(); ++i_start)
+    {
+      for (j_start = 0; j_start < pts_chk[i_start].size(); ++j_start)
+      {
+        // If time of point being checked exceeds current time,
+        // Check for potential collision from that particular index onwards
+        if (pts_chk[i_start][j_start].first > t_cur)
+        {
+          goto find_ij_start;
+        }
+      }
+    }
+    
+    find_ij_start:;
 
-  //     /* The navigation task completed */
-  //     goal_reached = true;
-  //     replan_needed = false;
-  //   }
-  //   // REPLAN: if current time elapsed exceeds replan time threshold
-  //   else if (t_cur > replan_thresh_ ||
-  //           (!touch_the_goal && planner_manager_->traj_.local_traj.pts_chk.back().back().first - t_cur < emergency_time_))
-  //   {
-  //     // Replan trajectory needed
-  //     goal_reached = false;
-  //     replan_needed = true;
-  //   }
+      // Is local target near the goal?
+      const bool target_near_goal = ((local_target_pt_ - end_pt_).norm() < 1e-2);
+      size_t i_end = target_near_goal ? pts_chk.size() : pts_chk.size() * 3 / 4;
+      for (size_t i = i_start; i < i_end; ++i)
+      {
+        for (size_t j = j_start; j < pts_chk[i].size(); ++j)
+        {
 
-  //   return std::make_pair(goal_reached, replan_needed);
-  // }
+          double t = pts_chk[i][j].first; // time
+          Eigen::Vector3d pos = pts_chk[i][j].second; //position
+          bool in_obs_grid = planner_manager_->grid_map_->getInflateOccupancy(pos); // Indicates if occupancy grid is occupied
+
+          if (!in_obs_grid){
+            // Iterate through trajectories of other agents
+            for (size_t id = 0; id < planner_manager_->traj_.swarm_traj.size(); id++)
+            {
+              // Skip own trajectory or if drone ID of trajectory does not match desired ID
+              // Or if the trajectory of other drones are not planned yet
+              if ((planner_manager_->traj_.swarm_traj.at(id).drone_id != (int)id) ||
+                  (planner_manager_->traj_.swarm_traj.at(id).drone_id == planner_manager_->pp_.drone_id))
+              {
+                continue;
+              }
+
+              // Calculate time for other drone
+              double t_X = t - (info->start_time - planner_manager_->traj_.swarm_traj.at(id).start_time);
+              // If time t_X is valid
+              if (t_X > 0 && t_X < planner_manager_->traj_.swarm_traj.at(id).duration) 
+              {
+                Eigen::Vector3d agent_predicted_pos = planner_manager_->traj_.swarm_traj.at(id).traj.getPos(t_X);
+                double dist = (pos - agent_predicted_pos).norm();
+
+                if (dist < CLEARANCE)
+                {
+                  logWarn(string_format("Clearance between drone %d and drone %d is %f, too close!",
+                          planner_manager_->pp_.drone_id, (int)id, dist));
+
+                  potential_agent_collision_ = ((t - t_cur) < emergency_time_);
+                  return true;
+                }
+              }
+            }
+          }
+          else {
+            return true;
+          }
+
+        }
+        j_start = 0;
+      }
+
+      return EMPTY_E;
+  }
 
   /**
    * Helper Methods
   */
-  // Execute change of FSM state
-  void EGOReplanFSM::changeFSMExecState(FSM_EXEC_STATE new_state, string pos_call)
-  {
-
-    if (new_state == current_state_)
-      continously_called_times_++;
-    else
-      continously_called_times_ = 1;
-
-    static string state_str[8] = {"INIT", "WAIT_TARGET", "GEN_NEW_TRAJ", "REPLAN_TRAJ", "EXEC_TRAJ", "EMERGENCY_STOP", "SEQUENTIAL_START"};
-    int pre_s = int(current_state_);
-    current_state_ = new_state;
-
-    logInfo(string_format("[%s]: from %s to %s", 
-      pos_call.c_str(), state_str[pre_s].c_str(), state_str[int(new_state)].c_str()));
-
-  }
-
+ 
   // display the FSM state along with other indicators (have_odom, have_target, have_trigger etc.)
   void EGOReplanFSM::printFSMExecState()
   {
-    static string state_str[8] = {"INIT", "WAIT_TARGET", "GEN_NEW_TRAJ", "REPLAN_TRAJ", "EXEC_TRAJ", "EMERGENCY_STOP", "SEQUENTIAL_START"};
-
     std::string msg{""};
-    msg += string_format("[FSM]: state: %s", state_str[int(current_state_)].c_str());
+    msg += string_format("[FSM]: state: %s", StateToString(getServerState()).c_str());
 
     if (!have_odom_)
     {
@@ -984,10 +956,10 @@ namespace ego_planner
     {
       msg += ", waiting for target";
     }
-    if (!have_trigger_)
-    {
-      msg += ", waiting for trigger";
-    }
+    // if (!have_trigger_)
+    // {
+    //   msg += ", waiting for trigger";
+    // }
     if (planner_manager_->pp_.drone_id >= 1 && !have_recv_pre_agent_)
     {
       msg += ", haven't receive traj from previous drone";
@@ -996,9 +968,9 @@ namespace ego_planner
     logInfo(msg);
   }
 
-  std::pair<int, EGOReplanFSM::FSM_EXEC_STATE> EGOReplanFSM::timesOfConsecutiveStateCalls()
+  std::pair<int, EGOReplanFSM::ServerState> EGOReplanFSM::timesOfConsecutiveStateCalls()
   {
-    return std::pair<int, FSM_EXEC_STATE>(continously_called_times_, current_state_);
+    return std::pair<int, ServerState>(continously_called_times_, getServerState());
   }
 
   void EGOReplanFSM::polyTraj2ROSMsg(traj_utils::PolyTraj &poly_msg, traj_utils::MINCOTraj &MINCO_msg)
@@ -1128,7 +1100,7 @@ namespace ego_planner
 
     transformMINCOTrajectoryToWorld(MINCO_msg);
 
-    poly_traj_pub_.publish(poly_msg); // Publish to corresponding drone for execution
+    poly_traj_pub_.publish(poly_msg); // Publish to own trajectory server under current drone_id for execution
     broadcast_ploytraj_pub_.publish(MINCO_msg); // Broadcast to all other drones for replanning to optimize in avoiding swarm collision
 
     return true;

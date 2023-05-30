@@ -100,7 +100,7 @@
         <param name="grid_map/local_update_range_x" value="5.5" />
         <param name="grid_map/local_update_range_y" value="5.5" />
         <param name="grid_map/local_update_range_z" value="4.5" />
-        <param name="grid_map/obstacles_inflation" value="0.0" />
+        <param name="grid_map/obstacles_inflation" value="0.1" />
         <param name="grid_map/local_map_margin" value="10"/>
         <param name="grid_map/ground_height" value="-0.25"/>
         <!-- camera parameter -->
@@ -143,7 +143,7 @@
         <param name="optimization/weight_sqrvariance" value="10000.0" type="double"/>
         <param name="optimization/weight_time" value="10.0" type="double"/>
         <param name="optimization/weight_formation" value="100" type="double"/>
-        <param name="optimization/obstacle_clearance" value="0.1" type="double"/>
+        <param name="optimization/obstacle_clearance" value="0.2" type="double"/>
         <param name="optimization/obstacle_clearance_soft" value="0.5" type="double"/>
         <param name="optimization/swarm_clearance" value="0.5" type="double"/>
         <param name="optimization/max_vel" value="$(arg max_vel)" type="double"/>

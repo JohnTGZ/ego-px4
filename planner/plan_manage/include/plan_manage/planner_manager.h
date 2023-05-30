@@ -39,6 +39,19 @@ namespace ego_planner
         const Eigen::Vector3d &end_vel, const Eigen::Vector3d &formation_start_pt,
         const Eigen::Vector3d &formation_end_pt, const bool flag_polyInit, 
         const bool flag_randomPolyTraj, const bool touch_goal);
+
+    /**
+     * @brief Get a global trajectory given boundary conditions and waypoints
+     * 
+     * @param start_pos 
+     * @param start_vel 
+     * @param start_acc 
+     * @param waypoints 
+     * @param end_vel 
+     * @param end_acc 
+     * @return true 
+     * @return false 
+     */
     bool planGlobalTrajWaypoints(
         const Eigen::Vector3d &start_pos, const Eigen::Vector3d &start_vel,
         const Eigen::Vector3d &start_acc, const std::vector<Eigen::Vector3d> &waypoints,
@@ -51,8 +64,18 @@ namespace ego_planner
     bool EmergencyStop(Eigen::Vector3d stop_pos);
     bool checkCollision(int drone_id);
     bool setLocalTrajFromOpt(const poly_traj::MinJerkOpt &opt, const bool touch_goal);
-    inline double getSwarmClearance(void) { return ploy_traj_opt_->get_swarm_clearance_(); }
-    inline int getCpsNumPrePiece(void) { return ploy_traj_opt_->get_cps_num_prePiece_(); }
+    inline double getSwarmClearance(void) { 
+      return ploy_traj_opt_->get_swarm_clearance_(); 
+    }
+
+    /**
+     * @brief Return Number of distinctive constraint points per piece
+     * 
+     * @return int Number of distinctive constraint points per piece
+     */
+    inline int getCpsNumPrePiece(void) { 
+      return ploy_traj_opt_->get_cps_num_prePiece_(); 
+    }
     // inline PtsChk_t getPtsCheck(void) { return ploy_traj_opt_->get_pts_check_(); }
 
     PlanParameters pp_;

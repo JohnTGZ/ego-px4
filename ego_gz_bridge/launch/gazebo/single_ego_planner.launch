@@ -102,6 +102,7 @@
         <!-- Published Topics -->
         <remap from="/mavros/setpoint_raw/local" to="/$(arg drone_id_ns)/$(arg command_topic)"/>
         <remap from="~model" to="/$(arg drone_id_ns)/model"/>
+        <remap from="/server_state" to="/$(arg drone_id_ns)/server_state"/>
         <!-- Service clients -->
         <remap from="/mavros/cmd/arming" to="/$(arg drone_id_ns)/mavros/cmd/arming"/>
         <remap from="/mavros/set_mode" to="/$(arg drone_id_ns)/mavros/set_mode"/>

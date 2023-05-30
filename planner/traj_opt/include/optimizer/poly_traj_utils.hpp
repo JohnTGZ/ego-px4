@@ -688,26 +688,35 @@ namespace poly_traj
         }
 
         // zxzx
+        /**
+         * @brief 
+         * 
+         * @param t Current time 
+         * @return std::pair<int, double> Returns a pair with index as the first value 
+         * and ratio of current time to the whole piece as the second value
+         */
         inline std::pair<int, double> locatePieceIdxWithRatio(double &t) const
         {
             int N = getPieceNum();
             int idx;
             double dur;
+            double time_within_piece = t;
+            // Given the point at desired time (t), get the index (idx) of the piece which corresponds to it
             for (idx = 0;
                  idx < N &&
-                 t > (dur = pieces[idx].getDuration());
+                 time_within_piece > (dur = pieces[idx].getDuration());
                  idx++)
             {
-                t -= dur;
+                time_within_piece -= dur;
             }
             if (idx == N)
             {
                 idx--;
-                t += pieces[idx].getDuration();
+                time_within_piece += pieces[idx].getDuration();
             }
             std::pair<int, double> idx_ratio;
             idx_ratio.first = idx;
-            idx_ratio.second = t / dur;
+            idx_ratio.second = time_within_piece / dur;
             return idx_ratio;
         }
 
@@ -1395,4 +1404,4 @@ namespace poly_traj
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     };
 
-} //namespace poly_traj
+} // namespace poly_traj

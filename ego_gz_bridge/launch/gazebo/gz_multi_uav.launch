@@ -1,6 +1,6 @@
 <launch>
   <!-- Gazebo parameters -->
-  <arg name="world_name" default="$(find ego_gz_bridge)/simulation/worlds/empty.world"/>
+  <arg name="world_name"/>
   <!-- Vehicle name used by PX4 configuration -->
   <arg name="vehicle" default="iris"/>
   <!-- Actual model SDF to be spawned -->

@@ -11,7 +11,7 @@ using std::vector;
 
 namespace ego_planner
 {
-
+  // Outer idx is id of constraint piece, inner idx is constraint points with individual pairs (time, position)
   typedef std::vector<std::vector<std::pair<double, Eigen::Vector3d>>> PtsChk_t;
 
   struct GlobalTrajData
@@ -66,7 +66,7 @@ namespace ego_planner
       global_traj.glb_t_of_lc_tgt = world_time;
       global_traj.last_glb_t_of_lc_tgt = -1.0;
 
-      local_traj.drone_id = -1;
+      local_traj.drone_id = -1; //set to negative to indicate no received trajectories from other drones yet
       local_traj.duration = 0.0;
       local_traj.traj_id = 0;
     }

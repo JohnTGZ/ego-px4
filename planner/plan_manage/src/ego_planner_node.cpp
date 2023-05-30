@@ -41,7 +41,6 @@ using namespace ego_planner;
 
 int main(int argc, char **argv)
 {
-
   ros::init(argc, argv, "ego_planner_node");
   ros::NodeHandle nh("~");
 
@@ -49,8 +48,8 @@ int main(int argc, char **argv)
 
   rebo_replan.init(nh);
 
-  // ros::Duration(1.0).sleep();
-  ros::spin();
+  ros::MultiThreadedSpinner spinner(2);
+  spinner.spin();
 
   return 0;
 }
