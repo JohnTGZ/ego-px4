@@ -127,6 +127,19 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
     - Add pausing/cancellation of waypoints
     - Use drone_detection module to remove the drone point cloud, starting with simulation.
     - Replanning intentionally does not take into account the current position of the drone. This could be perhaps due to the issue of not being sure if the position of the drone relative to the world frame is accurate, due to possible drift from VIO.
+    - Factors affecting planning and tracking
+        - Investigate tracking error (Trajectory server functionality)
+            - Log difference between reference and actual position
+            - Acceleration, velocity, jerk limits 
+            - Tuning control gain? 
+            - Try with higher values of obstacle_clearance
+            - Total error = sensor error + tracking error + radius of drone
+                - Drone could end up closer to the obstacle due to tracking error
+        - Investigate controller error(?)
+        - Is the output trajectory (reference) in collision with the obstacles?
+        - Unknown regions are assumed to be obstacle free?
+            - Planning trajectories into the unknown
+
 
 ## Simulation
 - In Trajectory server
