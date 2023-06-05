@@ -5,7 +5,7 @@ from trajectory_server_msgs.msg import State, Waypoints
 from geometry_msgs.msg import Pose
 from std_msgs.msg import Int8
 
-num_drones = 2
+num_drones = 4
 
 # Publisher of server events to trigger change of states for trajectory server 
 waypoints_pub = rospy.Publisher('/waypoints', Waypoints, queue_size=10)
@@ -68,11 +68,16 @@ def main():
     # Send waypoints to UAVs
     print(f"Sending waypoints to UAVs")
     waypoints = []
-    waypoints.append(create_pose(4, 0, 1))
-    waypoints.append(create_pose(4, 3.5, 1))
-    waypoints.append(create_pose(4, 7, 1))
+    # Square formation with length L
+    length = 10
+    d = length/2
+    waypoints.append(create_pose(d, 0, 1))
+    waypoints.append(create_pose(d, d, 1))
+    waypoints.append(create_pose(-d, d, 1))
+    waypoints.append(create_pose(-d, -d, 1))
+    waypoints.append(create_pose(d, -d, 1))
+    waypoints.append(create_pose(0, 0, 1))
     pub_waypoints(waypoints)
-    print(f"Waypoints sent!")
 
 if __name__ == '__main__':
     main()
