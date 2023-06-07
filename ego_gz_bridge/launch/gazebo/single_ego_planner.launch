@@ -69,8 +69,6 @@
         <arg name="max_vel" value="1.5" />
         <arg name="max_acc" value="3.0" />
         <arg name="max_jer" value="20.0" />
-        <!-- <arg name="max_acc" value="1.0" />
-        <arg name="max_jer" value="20.0" /> -->
 
         <!--always set to 1.5 times grater than sensing horizen-->
         <arg name="planning_horizon" value="7.5" />
@@ -99,10 +97,13 @@
         <remap from="~planning/trajectory" to="/drone_$(arg drone_id)_planning/trajectory"/>
         <remap from="/mavros/state" to="/$(arg drone_id_ns)/mavros/state"/>
         <remap from="/mavros/local_position/pose" to="/$(arg drone_id_ns)/$(arg pose_topic)"/>
+        <remap from="/mavros/local_position/odom" to="/$(arg drone_id_ns)/$(arg odometry_topic)"/>
         <!-- Published Topics -->
         <remap from="/mavros/setpoint_raw/local" to="/$(arg drone_id_ns)/$(arg command_topic)"/>
-        <remap from="~model" to="/$(arg drone_id_ns)/model"/>
         <remap from="/server_state" to="/$(arg drone_id_ns)/server_state"/>
+        <remap from="/uav_path" to="/$(arg drone_id_ns)/uav_path"/>
+        <remap from="/tracking_error" to="/$(arg drone_id_ns)/tracking_error"/>
+        <remap from="~model" to="/$(arg drone_id_ns)/model"/>
         <!-- Service clients -->
         <remap from="/mavros/cmd/arming" to="/$(arg drone_id_ns)/mavros/cmd/arming"/>
         <remap from="/mavros/set_mode" to="/$(arg drone_id_ns)/mavros/set_mode"/>

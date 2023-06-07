@@ -1,20 +1,27 @@
+#include <numeric>
+#include <deque>
+
 #include <ros/ros.h>
-#include <tf/tf.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 #include <optimizer/poly_traj_utils.hpp>
 
 #include <geometry_msgs/PoseStamped.h>
+#include <nav_msgs/Odometry.h>
+#include <nav_msgs/Path.h>
 #include <mavros_msgs/PositionTarget.h>
 #include <mavros_msgs/CommandBool.h>
 #include <mavros_msgs/State.h>
 #include <mavros_msgs/SetMode.h>
-#include <nav_msgs/Odometry.h>
 #include <std_msgs/Empty.h>
 #include <std_msgs/Int8.h>
-#include <traj_utils/PolyTraj.h>
 #include <visualization_msgs/Marker.h>
 
+#include <traj_utils/PolyTraj.h>
+
 #include <trajectory_server_msgs/State.h>
+#include <trajectory_server_msgs/TrackingError.h>
 
 using namespace Eigen;
 
@@ -77,6 +84,8 @@ public:
 
   void UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg);
 
+  void UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg);
+
   void serverEventCb(const std_msgs::Int8::ConstPtr & msg);
 
   /**
@@ -98,6 +107,12 @@ public:
    * Timer callback to publish server state
   */
   void pubServerStateTimerCb(const ros::TimerEvent &e);
+
+  /**
+   * Timer callback to publish debug data such as UAV path, tracking error etc.
+  */
+  void debugTimerCb(const ros::TimerEvent &e);
+
 
   /* Trajectory execution methods */
 
@@ -154,15 +169,25 @@ public:
   */
   bool isPlannerHeartbeatTimeout();
 
-  /* Helper methods */
+  /* Publisher methods */
 
   /**
-   * Publish PVA (Position, Velocity, Acceleration) commands
+  * @brief Publish PVA (Position, Velocity, Acceleration) commands
+  * 
+  * @param p Position
+  * @param v Velocity
+  * @param a Acceleration
+  * @param j Jerk
+  * @param yaw Yaw
+  * @param yaw_rate Yaw rate 
+  * @param type_mask Type mask to mask the commands to ignore
   */
-  void publish_cmd(
+  void publishCmd(
     Vector3d p, Vector3d v, Vector3d a, 
     Vector3d j, double yaw, double yaw_rate, 
     uint16_t type_mask = 0);
+
+  /* Helper methods */
 
   std::pair<double, double> calculate_yaw(double t_cur, Eigen::Vector3d &pos, double dt);
 
@@ -236,10 +261,6 @@ public:
   /** get current server state */
   ServerState getServerState(); 
 
-  /**
-   * Publish the current servers' and UAV's state
-  */
-  void publishServerState();
 
 private:
   int drone_id_; // ID of drone being commanded by trajectory server instance
@@ -249,19 +270,22 @@ private:
   /* Publishers, Subscribers and Timers */
   ros::Publisher pos_cmd_raw_pub_; // Publisher of commands for PX4 
   ros::Publisher uav_mesh_pub_; // Publisher of model mesh visualisation
-
   ros::Publisher server_state_pub_; // Publisher of current uav and servers' states
+  ros::Publisher uav_path_pub_; // Publisher of actual UAV path
+  ros::Publisher tracking_error_pub_; // Publisher of tracking error
   
   ros::Subscriber poly_traj_sub_; // Subscriber for polynomial trajectory
   ros::Subscriber heartbeat_sub_; // Subscriber for heartbeat
   ros::Subscriber uav_state_sub_; // Subscriber for UAV State (MavROS)
   ros::Subscriber pose_sub_; // Subscriber for UAV State (MavROS)
+  ros::Subscriber odom_sub_; // Subscriber for UAV State (MavROS)
   // TODO: make this a service server
   ros::Subscriber set_server_state_sub_; // Subscriber for setting server state
 
   ros::Timer exec_traj_timer_; // Timer to generate PVA commands for trajectory execution
   ros::Timer tick_state_timer_; // Timer to tick the state machine 
   ros::Timer state_pub_timer_; // Timer to publish server states
+  ros::Timer debug_timer_; // Timer to publish debug data
 
   /** @brief Service clients **/
   ros::ServiceClient arming_client, set_mode_client; 
@@ -272,13 +296,19 @@ private:
   mavros_msgs::State uav_current_state_;
 
   geometry_msgs::PoseStamped uav_pose_;
+  nav_msgs::Odometry uav_odom_;
+  std::deque<geometry_msgs::PoseStamped> uav_poses_;
   boost::shared_ptr<poly_traj::Trajectory> traj_;
-  Eigen::Vector3d last_mission_pos_;
+  Eigen::Vector3d last_mission_pos_, last_mission_vel_;
 
-  // yaw control
   double last_mission_yaw_{0.0}, last_mission_yaw_dot_{0.0};
 
-  // Flags
+  // Pair of error value and timestamp (in seconds)
+  std::deque<std::pair<double, double>> err_xy_vec;
+  std::deque<std::pair<double, double>> err_xy_dot_vec;
+  std::deque<std::pair<double, double>> err_yaw_vec;
+
+  /* Flags */ 
   double traj_duration_;
   ros::Time start_time_;
   ros::Time heartbeat_time_{0};
@@ -286,11 +316,11 @@ private:
   bool mission_completed_{true};
   // bool heartbeat_timeout_{true};
 
-  // Params
+  /* Params */ 
   std::string node_name_{"traj_server"};
   double time_forward_; // Used to calculate yaw 
   double pub_cmd_freq_; // Frequency to publish PVA commands
-  double sm_tick_freq_; // Frequency to tick the state machine transitions
+  double sm_tick_freq_; 
 
   double planner_heartbeat_timeout_{0.5}; // Planner heartbeat timeout
 
@@ -298,6 +328,8 @@ private:
   double landed_height_{0.05}; // We assume that the ground is even (z = 0)
   double take_off_landing_tol_{0.05};
 
+  int max_poses_to_track_; // Maximum size of latest UAV path poses to display
+  double error_tracking_window_; // Maximum size of latest UAV path poses to display
 
 private:
   void logInfo(const std::string& str){

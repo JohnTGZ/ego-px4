@@ -15,6 +15,7 @@ This package contains the bridge to link Egoswarm V2 algorithms, the gazebo simu
 4. Other packages:
     - MavROS 
     - Listed in "Setup" section
+    - plotjuggler (For visualization of data over time)
 
 # Setup
 1. Install binaries
@@ -25,11 +26,12 @@ sudo apt install tmux python3-vcstool xmlstarlet -y
 # Install ROS dependencies
 sudo apt install ros-noetic-tf2-sensor-msgs -y
 sudo apt-get install ros-${ROS_DISTRO}-mavlink ros-${ROS_DISTRO}-mavros ros-${ROS_DISTRO}-mavros-msgs ros-${ROS_DISTRO}-mavros-extras -y
-# sudo apt-get install ros-${ROS_DISTRO}-joy ros-${ROS_DISTRO}-octomap-ros ros-${ROS_DISTRO}-control-toolbox -y
 # Install external dependencies
 sudo apt-get install protobuf-compiler libeigen3-dev libopencv-dev libgoogle-glog-dev -y
 wget https://raw.githubusercontent.com/mavlink/mavros/master/mavros/scripts/install_geographiclib_datasets.sh
 sudo bash ./install_geographiclib_datasets.sh
+# Extra tools for debugging
+sudo snap install plotjuggler
 ```
 
 2. Clone repositories
@@ -105,8 +107,6 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
                 - Broadcasted Trajectories (UAV Origin -> world frame)
                     - Passed to other planner servers
 14. Tested with 4 drones
-    - Works for easy paths, but for more complex paths, there is path collision detected even in an empty map, it is suspected that the depth image detects the other drones as obstacles (which should not be the case according to the paper) 
-        - One solution would be to use the drone_detection module to remove the drone point cloud, assuming it works in simulation
 15. Refactor code to make it cleaner, easier to modify for additional functionality in the future
     - FSM 
         - Refactor the state machine execution
@@ -114,40 +114,55 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
     - Waypoint execution 
         - Added functionality to accept waypoints via topics rather than through ros parameters
         - Created a new class to abstract away handling of waypoints
+16. Added logging of uav trajectory and tracking error to Trajectory Server node
+    - Used Plotjuggler to visualize error
+17. Investigate tracking error and maximum vel, acc, jerk parameters provided to planner
+    - With default Gazebo Iris Model (In obstacle free environment)
+        - Planner params
+            - Max acc (0.5), max Jerk (5.0)
+                - Max vel (0.5)
+                    - Max XY Tracking error: 0.11 ~ 0.2
+                    - Average XY Tracking error: Averages about 0.04 ~ 0.11
+            - Max acc (1.0), max Jerk (5.0)
+                - Max vel (0.5)
+                    - Max XY Tracking error: 0.19 ~ 0.35
+                        - 0.35 for a single drone
+                        - Around 0.2 - 0.25 for the other 3 drones
+                    - Average XY Tracking error: 0.05 ~ 0.15
+                - Max vel (1.5)
+                    - Max XY Tracking error: 0.4 ~ 0.55
+                    - Average XY Tracking error: 0.05 ~ 0.45 
+            - Max acc (3.0), max Jerk (20.0)
+                - Max vel (0.5)
+                    - Max XY Tracking error: 0.15
+                    - Average XY Tracking error: 0.03 ~ 0.14
 
-# Demo
-1. PX4 State control
-    - Demo takeoff, landing
-2. Multiple drones in Gazebo
-    - Demo with 4 drones
-        - Without obstacles
-        - with obstacles
-    - Demo with 2 drones
-3. Stuff to look at
-    - Add pausing/cancellation of waypoints
+# TODO
+    - Total error = sensor error + tracking error + radius of drone
+        - Drone could end up closer to the obstacle due to tracking error
     - Use drone_detection module to remove the drone point cloud, starting with simulation.
-    - Replanning intentionally does not take into account the current position of the drone. This could be perhaps due to the issue of not being sure if the position of the drone relative to the world frame is accurate, due to possible drift from VIO.
-
+    - Experiment
+        - Try with higher values of obstacle_clearance
+    - Investigate
+        - Unknown regions are assumed to be obstacle free?
+            - Planning trajectories into the unknown
+        - Investigate controller error(?)
+            - Tuning control gain? 
 ## Simulation
-- In Trajectory server
-    - Waypoint execution
-        - Cancel/Start/Pause execution
-        - Handle goals in obstacle regions (Cancel the goal?)
-- Use the drone_detection module to remove the drone point cloud
-- Look into gazebo plugins for quadrotor dynamics?
-    - Promethus & px4_command and SE03 Simulator (within egoswarm v2 repo)
-- Set up a more complex simulation world
+- Add publish server state to ego replan fsm, so that trajectory server can aggregate it.
+- Look into the math behind the gazebo plugin
 - Explore weird phenomenom between drone_num/formation_num and path planning problems
     - When actual number of drones are 2 
         - If num_drone == 2, then the planned path is abnormal and goes very close to the ground
         - If num_drone == 3, the planned path is normal. 
+- Set up a more complex simulation world
 
 ## gridmap
 - Add body to camera transform as a matrix ROS Param (Make sure that it is same as that in simulation)
 - Take in intrinsic params of camera via camera_info topic
 
 ## Trajectory Server
-- Does not check if every UAV in formation has finished execution of current waypoint before planning for the next one
+- Add mutexes
 - For trajectory server, read the current state of the mavros/state topic before determining the starting state machine state.
 - Disabling of offboard mode for land state would be a good feature. Current challenge to implement it is to be able to reliably check that the drone has actually landed (Otherwise it will be stuck in AUTO.LOITER while hovering in the air, being unable to disarm).
 
@@ -164,3 +179,7 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 - Solidify framework for managing multiple robots
 - Port to ROS2
 - Investigate changing the custom GridMap implementation to alternatives such as Octomap but still consider the potential performance issues with an established library.
+- Trajectory Server
+    - Support Cancel/Start/Pause of waypoints execution
+    - Handle goals in obstacle regions (Cancel the goal?)
+    - Check if every UAV in formation has finished execution of current waypoint before planning for the next one
