@@ -477,10 +477,13 @@
       <timeConstantUp>0.0125</timeConstantUp>
       <timeConstantDown>0.025</timeConstantDown>
       <maxRotVelocity>1100</maxRotVelocity>
+      <!-- motorConstant = (Thrust_coeff * density * rotor_diam**4) / (2 * pi)**2 -->
       <motorConstant>5.84e-06</motorConstant>
+      <!-- momentConstant is used to calculate rotor torque magnitude -->
       <momentConstant>0.06</momentConstant>
       <commandSubTopic>/gazebo/command/motor_speed</commandSubTopic>
       <motorNumber>0</motorNumber>
+      <!-- rotorDragCoefficient accounts for the H-force due to the perpendicular air velocity, resulting in drag -->
       <rotorDragCoefficient>0.000175</rotorDragCoefficient>
       <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
       <motorSpeedPubTopic>/motor_speed/0</motorSpeedPubTopic>
