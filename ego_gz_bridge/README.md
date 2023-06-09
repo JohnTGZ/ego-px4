@@ -141,16 +141,20 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
     - Total error = sensor error + tracking error + radius of drone
         - Drone could end up closer to the obstacle due to tracking error
     - Use drone_detection module to remove the drone point cloud, starting with simulation.
-    - Experiment
-        - Try with higher values of obstacle_clearance
+    - Parameters to play with for reducing collision with obstacles
+        - grid_map/obstacles_inflation
+            - Affects inflation of obstacles. This would be more visually intuitive, and creates a virtual cushion against planning too near to obstacles
+        - obstacle_clearance
+            - Somehow even with a relatively high value, the uav still plans a trajectory through tight corridors. COuld it it be due to it optimizing on a path provided by the global planner, and the global planner does not provide an alternative path because it does not take into account obstacle clearance?
     - Investigate
         - Unknown regions are assumed to be obstacle free?
             - Planning trajectories into the unknown
         - Investigate controller error(?)
             - Tuning control gain? 
+    - When rounding corners of obstacles, if the goal lies about a sharp turn around the corner, a trajectory with a sharp turn is planned, this could lead to issues if the obstacles is especially large as the drone will not be able to detect the other wall of the obstacle until it has turned around.  
+
 ## Simulation
 - Add publish server state to ego replan fsm, so that trajectory server can aggregate it.
-- Look into the math behind the gazebo plugin
 - Explore weird phenomenom between drone_num/formation_num and path planning problems
     - When actual number of drones are 2 
         - If num_drone == 2, then the planned path is abnormal and goes very close to the ground
@@ -174,6 +178,7 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 
 # Issues
 - Replanning intentionally does not take into account the current position of the drone. This could be perhaps due to the issue of not being sure if the position of the drone relative to the world frame is accurate, due to possible drift from VIO.
+
 
 # Future Roadmap
 - Solidify framework for managing multiple robots

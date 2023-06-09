@@ -26,7 +26,7 @@ void TrajServer::init(ros::NodeHandle& nh)
 
   nh.param("traj_server/max_poses_to_track", max_poses_to_track_, 250);
 
-  nh.param("traj_server/error_tracking_window", error_tracking_window_, 10.0);
+  nh.param("traj_server/error_tracking_window", error_tracking_window_, 2.5);
 
   /* Subscribers */
   poly_traj_sub_ = nh.subscribe("planning/trajectory", 10, &TrajServer::polyTrajCallback, this);
@@ -442,6 +442,7 @@ void TrajServer::debugTimerCb(const ros::TimerEvent &e){
     track_err.err_y_dot = fabs(uav_odom_.twist.twist.linear.y - last_mission_vel_(1)); 
     track_err.err_z_dot = fabs(uav_odom_.twist.twist.linear.z - last_mission_vel_(2)); 
 
+    // TODO calculation is wrong
     track_err.err_xy_dot = sqrt(
       track_err.err_x_dot * track_err.err_x_dot + track_err.err_y_dot * track_err.err_y_dot); 
 
